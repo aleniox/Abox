@@ -5,179 +5,120 @@ import ollama
 import logging
 from typing import Optional, List, Dict
 
-<<<<<<< HEAD
-# --- Cấu hình ---
-model_name = "gemma3:4b"
-MAX_HISTORY_TURNS = 50  # Mỗi turn = 1 user + 1 bot => giữ 20 message + system
-
-# --- System Prompt ---
-=======
-# Configure logging
+# --- Cấu hình logging ---
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-# Load system prompt
->>>>>>> 21b3706759ea816f47bedd4ddb6cd4a32857ddb9
+# --- Cấu hình model và prompt ---
+MODEL_NAME = "gemma3:4b"
+MAX_HISTORY_TURNS = 50  # Mỗi turn = user + assistant
+
 try:
     from prompt import prompt_system
 except ImportError:
     logger.warning("prompt.py not found. Using default system prompt.")
     prompt_system = "You are a helpful AI assistant that can analyze images."
 
-# Configuration
-MODEL_NAME = "gemma3:4b"
+# --- Lịch sử chat ---
 HISTORY_CHAT: List[Dict[str, str]] = [{"role": "system", "content": prompt_system}]
 
-<<<<<<< HEAD
-# Lịch sử chat sẽ lưu các dictionaries theo định dạng mà ollama.chat mong đợi
-# Bắt đầu với system prompt
-history_chat = [{'role': 'system', 'content': system_prompt_content}]
-
-# --- Giới hạn lịch sử chat ---
-def trim_history(history):
+def trim_history(history: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    """Giới hạn số lượt trò chuyện trong lịch sử."""
     system = history[:1]
     turns = history[1:]
-    return system + turns[-MAX_HISTORY_TURNS*2:]  # mỗi turn = user + assistant
+    return system + turns[-MAX_HISTORY_TURNS * 2:]
 
-# --- Khởi động Ollama ---
-def start_ollama_server():
-    try:
-        subprocess.Popen(["ollama", "serve"])
-        print("🟢 Starting Ollama server...")
-        time.sleep(5)
-        subprocess.run(["ollama", "pull", model_name], check=True)
-        print(f"✅ Model '{model_name}' is ready.")
-    except Exception as e:
-        print(f"❌ Ollama startup error: {e}")
-
-# --- Hàm chat chính ---
-def chat(message="", image_path=None) -> str:
-    global history_chat
-
-    user_message = {'role': 'user', 'content': message or ""}
-    if image_path and os.path.isfile(image_path):
-        user_message['images'] = [image_path]
-        print(f"🖼️ Image sent: {image_path}")
-
-    # Trim lịch sử nếu quá dài
-    messages = trim_history(history_chat + [user_message])
-=======
 def start_ollama_server() -> None:
-    """Start Ollama server and pull the specified model."""
+    """Khởi động Ollama và pull model."""
     try:
         logger.info("Starting Ollama server...")
         subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        time.sleep(3)  # Wait for server to start
+        time.sleep(3)
 
         logger.info(f"Pulling model: {MODEL_NAME}")
         subprocess.run(["ollama", "pull", MODEL_NAME], check=True, capture_output=True, text=True)
-        logger.info(f"Model {MODEL_NAME} ready.")
-        time.sleep(2)
+        logger.info(f"✅ Model '{MODEL_NAME}' is ready.")
     except FileNotFoundError:
-        logger.error("Ollama not found. Install from https://ollama.com/download.")
+        logger.error("❌ Ollama không được tìm thấy. Cài đặt tại: https://ollama.com/download")
         raise
     except subprocess.CalledProcessError as e:
-        logger.error(f"Failed to pull model {MODEL_NAME}: {e.stderr}")
+        logger.error(f"❌ Không thể pull model {MODEL_NAME}: {e.stderr}")
         raise
     except Exception as e:
-        logger.error(f"Unexpected error starting Ollama: {e}")
+        logger.error(f"❌ Lỗi khởi động Ollama: {e}")
         raise
 
-def chat(message: str = "", image_path: Optional[str] = None) -> str:
-    """Interact with Ollama model, supporting text and image inputs."""
+def chat(message: str = "", image_path: Optional[List[str]] = None) -> str:
+    """Gửi tin nhắn tới model, hỗ trợ cả văn bản và nhiều hình ảnh."""
     global HISTORY_CHAT
-    logger.info("Processing chat request...")
+    logger.info("🧠 Đang xử lý yêu cầu chat...")
 
     user_message = {"role": "user", "content": message or ""}
-    if image_path and os.path.exists(image_path):
-        user_message["images"] = [image_path]
-        logger.info(f"Sending image: {image_path}")
-    elif image_path:
-        logger.warning(f"Image not found: {image_path}")
 
+    # Xử lý danh sách ảnh nếu có
+    valid_images = []
+    if image_path:
+        for img in image_path:
+            if os.path.isfile(img):
+                valid_images.append(img)
+                logger.info(f"🖼️ Đã thêm ảnh: {img}")
+            else:
+                logger.warning(f"⚠️ Ảnh không tồn tại: {img}")
+        if valid_images:
+            user_message["images"] = valid_images
+
+    # Nếu không có nội dung và cũng không có ảnh hợp lệ
     if not user_message["content"] and "images" not in user_message:
-        logger.warning("No text or valid image provided.")
-        return "⚠️ Please provide text or a valid image."
->>>>>>> 21b3706759ea816f47bedd4ddb6cd4a32857ddb9
+        return "⚠️ Vui lòng cung cấp văn bản hoặc ít nhất một ảnh hợp lệ."
 
-    messages = HISTORY_CHAT + [user_message]
+    messages = trim_history(HISTORY_CHAT + [user_message])
+
     try:
-<<<<<<< HEAD
-        stream = ollama.chat(model=model_name, messages=messages, stream=True, options={"num_ctx": 4096, "max_tokens": 512})
         response = ""
-        for chunk in stream:
-            if 'message' in chunk and 'content' in chunk['message']:
-                content = chunk['message']['content']
-=======
         stream = ollama.chat(model=MODEL_NAME, messages=messages, stream=True)
-        response = ""
         for chunk in stream:
-            if content := chunk.get("message", {}).get("content"):
->>>>>>> 21b3706759ea816f47bedd4ddb6cd4a32857ddb9
+            content = chunk.get("message", {}).get("content", "")
+            if content:
                 print(content, end="", flush=True)
                 response += content
         print()
 
-<<<<<<< HEAD
-        # Cập nhật lịch sử sau khi nhận phản hồi thành công
-        history_chat += [user_message, {'role': 'assistant', 'content': response}]
-        return response
-
-    except Exception as e:
-        return f"⚠️ Error: {e}"
-
-# --- Dùng thử (CLI) ---
-if __name__ == "__main__":
-    start_ollama_server()
-    print("\n--- Starting Direct Ollama Multimodal Chat ---")
-    print(f"Using model: {model_name}")
-    print("Type 'exit' or 'quit' to end the chat.")
-    print("To send an image, type: image <path_to_image> [your text message]")
-
-    while True:
-        user_input = input("\nYou: ")
-=======
+        # Cập nhật lịch sử chat
         HISTORY_CHAT.extend([user_message, {"role": "assistant", "content": response}])
         return response
+
     except ollama.ResponseError as e:
         logger.error(f"Ollama API error: {e}")
-        return f"⚠️ Ollama error: {e}"
+        return f"⚠️ Lỗi Ollama: {e}"
     except Exception as e:
         logger.error(f"Chat error: {e}")
-        return "⚠️ Unable to respond."
+        return "⚠️ Không thể phản hồi."
 
+
+# --- CLI ---
 if __name__ == "__main__":
     start_ollama_server()
-    logger.info(f"Starting chat with model: {MODEL_NAME}")
-    print("Type 'exit' or 'quit' to end. Use 'image <path> [text]' for images.")
+    logger.info(f"🤖 Chat bắt đầu với model: {MODEL_NAME}")
+    print("Gõ 'exit' hoặc 'quit' để thoát.")
+    print("Để gửi ảnh: image <đường_dẫn_ảnh> [nội dung_tin_nhắn]")
 
     while True:
-        user_input = input("You: ").strip()
->>>>>>> 21b3706759ea816f47bedd4ddb6cd4a32857ddb9
+        user_input = input("\nYou: ").strip()
         if user_input.lower() in ["exit", "quit"]:
-            logger.info("Ending chat.")
+            logger.info("🛑 Kết thúc chat.")
             break
 
-        image_path = "downloads/processed_image.png"
-<<<<<<< HEAD
-        text_message = user_input
+        image_path = None
+        text = user_input
 
         if user_input.lower().startswith("image "):
             parts = user_input.split(" ", 2)
             if len(parts) > 1:
                 image_path = parts[1]
-                text_message = parts[2] if len(parts) > 2 else ""
+                text = parts[2] if len(parts) > 2 else ""
             else:
-                print("Invalid format. Use: image <path_to_image> [your text]")
+                print("⚠️ Cú pháp sai. Dùng: image <đường_dẫn_ảnh> [tin nhắn]")
                 continue
 
-        bot_response = chat(message=text_message, image_path=image_path)
-=======
-        text = user_input
-        if user_input.lower().startswith("image "):
-            parts = user_input.split(" ", 2)
-            image_path = parts[1] if len(parts) > 1 else image_path
-            text = parts[2] if len(parts) > 2 else ""
-
-        chat(text, image_path)
->>>>>>> 21b3706759ea816f47bedd4ddb6cd4a32857ddb9
+        bot_response = chat(message=text, image_path=image_path)
+        print(f"\nAssistant: {bot_response}")
