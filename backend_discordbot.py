@@ -1,85 +1,123 @@
 import discord
 from discord.ext import commands
 import os
-import llm_chain
-from dotenv import load_dotenv
+import logging
 import asyncio
-import tools
 import requests
 from PIL import Image
-import io
 from io import BytesIO
+from pathlib import Path
+from datetime import datetime
+from typing import List, Optional
+from dotenv import load_dotenv
+import tools
+import llm_chain
 import config
-# Load biến môi trường
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
+
+# Load environment variables
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOK")
+if not TOKEN:
+    logger.error("DISCORD_TOK not found in environment variables.")
+    raise ValueError("DISCORD_TOK is required.")
 
-# Khởi tạo bot với prefix là "!"
+# Initialize bot
 intents = discord.Intents.default()
-intents.message_content = True  # Bật quyền truy cập nội dung tin nhắn
-
+intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Sự kiện khi bot sẵn sàng
+def save_image(attachment: discord.Attachment, download_folder: Path) -> Optional[Path]:
+    """Download and save an image attachment, returning the file path."""
+    if not attachment.content_type or not attachment.content_type.startswith("image/"):
+        logger.debug(f"Skipping non-image attachment: {attachment.filename}")
+        return None
+
+    try:
+        # Generate unique filename using timestamp and attachment ID
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        file_ext = attachment.filename.split(".")[-1] if "." in attachment.filename else "png"
+        file_name = f"image_{timestamp}_{attachment.id}.{file_ext}"
+        file_path = download_folder / file_name
+
+        # Download image
+        with requests.get(attachment.url, stream=True) as response:
+            response.raise_for_status()
+            img = Image.open(BytesIO(response.content))
+            img.save(file_path, format=img.format or "PNG")
+            logger.info(f"Saved image: {file_path}")
+            return file_path
+    except Exception as e:
+        logger.error(f"Failed to save image {attachment.filename}: {e}")
+        return None
+
 @bot.event
 async def on_ready():
-    print(f"🤖 Bot đã đăng nhập với tên: {bot.user}")
+    """Log when the bot is ready."""
+    logger.info(f"Bot logged in as {bot.user}")
 
-# Lệnh !start
 @bot.command()
 async def start(ctx):
+    """Greet the user."""
     await ctx.send(f"👋 Xin chào {ctx.author.display_name}!")
 
-# Xử lý tin nhắn tự động (không phải lệnh)
 @bot.event
 async def on_message(message):
+    """Handle incoming messages, including text and multiple image attachments."""
     if message.author == bot.user:
         return
 
+    # Process commands
     if message.content.startswith("!"):
         await bot.process_commands(message)
         return
-    image_processed = False
-    temp_path = None
-    # Kiểm tra và phản hồi ảnh
-    if message.attachments:
-        for attachment in message.attachments:
-            if attachment.content_type and attachment.content_type.startswith("image/"):
-                image_url = attachment.url
-                print(f"🖼️ Ảnh được gửi: {image_url}")
-                # Tải ảnh về
-                response = requests.get(image_url)
-                RGBimg = Image.open(BytesIO(response.content))
 
-                # Lưu ảnh tạm thời (có thể dùng tên file tạm)
-                temp_path = f"{config.DOWNLOAD_FOLDER}/processed_image.png"
-                RGBimg.save(temp_path)
-                await message.channel.send(f"📷 Ảnh cậu gửi: {image_url}")
-                image_processed = True
-    # Gửi hành động "đang nhập"
-    if message.content or image_processed:
+    # Ensure download folder exists
+    download_folder = Path(config.DOWNLOAD_FOLDER)
+    download_folder.mkdir(parents=True, exist_ok=True)
+
+    # Process attachments
+    image_paths = []
+    for attachment in message.attachments:
+        file_path = save_image(attachment, download_folder)
+        if file_path:
+            image_paths.append(file_path)
+
+    # Send typing indicator and process message
+    if message.content or image_paths:
         async with message.channel.typing():
             loop = asyncio.get_running_loop()
             try:
-                if message.content:
-                    response = await loop.run_in_executor(
-                        None, llm_chain.chat, message.content, temp_path
-                    )
-                else:
-                    response = "Ảnh đã được xử lý!"
+                if image_paths:
+                    # Send confirmation for images
+                    image_urls = [att.url for att in message.attachments if att.content_type.startswith("image/")]
+                    await message.channel.send(f"📷 Nhận được {len(image_urls)} ảnh: {', '.join(image_urls)}")
+                
+                # Call LLM with text and/or image paths
+                response = await loop.run_in_executor(
+                    None,
+                    llm_chain.chat,
+                    message.content or "",
+                    image_paths  # Pass list of image paths
+                )
             except Exception as e:
-                print("Lỗi khi gọi llm_chain.chat:", e)
+                logger.error(f"Error processing message: {e}")
                 response = "⚠️ Có lỗi xảy ra khi xử lý yêu cầu."
-
+            
             response = tools.format_discord_message(response)
             await message.channel.send(response)
 
-
-# Khởi động server LLM và chạy bot
 def main():
-    # llm.start_ollama_server()
-    print("🤖 Bot đang chạy trên Discord...")
-    bot.run(TOKEN)
+    """Start the bot."""
+    logger.info("Starting Discord bot...")
+    try:
+        bot.run(TOKEN)
+    except Exception as e:
+        logger.error(f"Failed to run bot: {e}")
+        raise
 
 if __name__ == "__main__":
     main()
