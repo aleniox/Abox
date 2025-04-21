@@ -19,8 +19,3 @@ def format_discord_message(text):
             result += f"```fix\n{normal.strip()}\n```\n"
 
     return result.strip()
-
-# # # 🔹 Ví dụ sử dụng
-# text = '$$Ngồi hơi khom, ngẩng đầu lên nhìn những cánh đào rơi, mỉm cười rạng rỡ$$ "Ôi, nhìn này, thiệt là dễ thương! Bạn cũng thích đào nha?" $$Nháy mắt, vẩy nhẹ cái tai nghe$$ "Hôm nay nghe bài này nghe cứ thư giãn quá!"'
-# print(format_discord_message(text))
-
