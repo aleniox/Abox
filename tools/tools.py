@@ -7,15 +7,15 @@ def format_discord_message(text):
 
     matches = re.findall(pattern, text)
     result = ""
-
+    print("Matches found:", matches)
     for match in matches:
         action, quoted, normal = match
 
         if action:
             result += f"_ {action.strip()} _\n"
         elif quoted:
-            result += f"```fix\n{quoted.strip()}\n```\n"
+            result += f"**{quoted.strip()}**\n"
         elif normal and normal.strip():
-            result += f"```fix\n{normal.strip()}\n```\n"
+            result += f"**{normal.strip()}**\n"
 
     return result.strip()
