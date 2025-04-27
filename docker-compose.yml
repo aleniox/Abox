@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  discord-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env  # Load biến môi trường từ file
+    environment:
+      - DOWNLOAD_FOLDER=/app/downloads
+    volumes:
+      - ./downloads:/app/downloads
+      # Mount volume cho dữ liệu thay đổi thường xuyên
+      - ./chroma_data:/app/chroma_data  # Nếu dùng ChromaDB
+    restart: unless-stopped
+    container_name: discord-bot

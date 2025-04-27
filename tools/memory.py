@@ -58,7 +58,8 @@ class VectorHistory:
                 "images": json.loads(meta["images"]),
                 "timestamp": meta["timestamp"]
             })
-        return sorted(history, key=lambda x: x["timestamp"])
+        recent_history = sorted(history, key=lambda x: x["timestamp"])
+        return [{"role": his["role"], "content": his["content"], "images": his["images"]} for his in recent_history]
 
     def search_context(self, session_id: str, query: str, k: int = 3) -> List[str]:
         """Tìm tin nhắn liên quan trong lịch sử dùng Vector Search"""
@@ -71,3 +72,5 @@ class VectorHistory:
         return results["documents"][0]
 
 # Singleton instance
+vector_history = VectorHistory()
+print(vector_history.get_recent_history("1363497131637211166"))

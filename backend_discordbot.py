@@ -65,6 +65,7 @@ async def on_message(message):
     if message.author == bot.user:
         return
     session_id = str(message.channel.id)
+    logger.info(session_id)
     # Process commands
     if message.content.startswith("!"):
         await bot.process_commands(message)
