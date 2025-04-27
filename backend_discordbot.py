@@ -1,5 +1,7 @@
 import discord
 from discord.ext import commands
+from discord.ui import Button, View
+
 import os
 import logging
 import asyncio
@@ -12,6 +14,7 @@ import tools.agent_tools as agent_tools
 import llm_chain
 import config
 import tools.upload_media as upload_media
+
 
 
 # Configure logging
@@ -40,8 +43,6 @@ async def on_ready():
 async def start(ctx):
     """Greet the user."""
     await ctx.send(f"👋 Xin chào {ctx.author.display_name}!")
-
-from discord.ui import Button, View
 
 @bot.command()
 async def hana(ctx, *, query):
