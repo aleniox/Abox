@@ -7,6 +7,7 @@ from typing import Optional, List, Dict
 import tools.memory as memory
 import tools.speech2text as speech2text
 import tools.agent_tools as agent_tools
+import config
 
 
 # --- Cấu hình logging ---
@@ -14,7 +15,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger("llm_chain")
 
 # --- Cấu hình model và prompt ---
-MODEL_NAME = "gemma3:4b"
+MODEL_NAME = config.MODEL_NAME
 
 try:
     from prompt import prompt_system
@@ -52,7 +53,7 @@ def chat(session_id , message: str = "", image_path: Optional[List[str]] = None,
     logger.info("🧠 Đang xử lý yêu cầu chat...")
 
     user_message = {"role": "user", "content": message or ""}
-    vector_history.add_message(session_id, user_message)
+    # vector_history.add_message(session_id, user_message)
     print(f"🗨️ Tin nhắn: {user_message['content']}")
     # Xử lý danh sách ảnh nếu có
     valid_images = []
@@ -79,7 +80,8 @@ def chat(session_id , message: str = "", image_path: Optional[List[str]] = None,
     if not user_message["content"] and "images" not in user_message:
         return "⚠️ Vui lòng cung cấp văn bản hoặc ít nhất một ảnh hợp lệ."
 
-    agent_message = agent_tools.smart_agent(user_message)
+    # agent_message = agent_tools.smart_agent(user_message)
+    agent_message = [user_message]
     print(f"🗨️ Tin nhắn sau khi xử lý: {agent_message}")
     # print(HISTORY_CHAT +  agent_message)
     messages = memory.trim_history(HISTORY_CHAT +  agent_message)
@@ -96,7 +98,7 @@ def chat(session_id , message: str = "", image_path: Optional[List[str]] = None,
     print()
     # Cập nhật lịch sử chat
     assistant_message = {"role": "assistant", "content": response}
-    vector_history.add_message(session_id, assistant_message)
+    # vector_history.add_message(session_id, assistant_message)
     HISTORY_CHAT.extend([user_message, assistant_message])
     return response
 

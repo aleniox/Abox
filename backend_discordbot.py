@@ -119,7 +119,7 @@ async def on_message(message):
 
 def main():
     """Start the bot."""
-    llm_chain.start_ollama_server()
+    # llm_chain.start_ollama_server()
     logger.info("Starting Discord bot...")
     try:
         bot.run(TOKEN)

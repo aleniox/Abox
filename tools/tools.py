@@ -1,21 +1,27 @@
 import re
 
 def format_discord_message(text):
-    # Tìm toàn bộ các đoạn hành động $$...$$ và lời nói "..." hoặc văn bản thường
-    # Regex sẽ giữ lại dấu để phân biệt
-    pattern = r'\$\$(.*?)\$\$|"(.*?)"|([^\$"]+)'  # match $$...$$, "..." và phần còn lại
-
-    matches = re.findall(pattern, text)
-    result = ""
-    print("Matches found:", matches)
-    for match in matches:
-        action, quoted, normal = match
-
-        if action:
-            result += f"_ {action.strip()} _\n"
-        elif quoted:
-            result += f"**{quoted.strip()}**\n"
-        elif normal and normal.strip():
-            result += f"**{normal.strip()}**\n"
-
-    return result.strip()
+    # Pattern để bắt các thành phần:
+    # $$...$$ → Hành động (in nghiêng _..._)
+    # Văn bản thường → Lời thoại (in đậm **...**)
+    
+    # Tách các phần hành động và lời thoại
+    parts = re.split(r'(\$\$.*?\$\$)', text)
+    
+    result = []
+    for part in parts:
+        if not part.strip():
+            continue
+            
+        # Nếu là hành động ($$...$$)
+        if part.startswith('$$') and part.endswith('$$'):
+            action = part[2:-2].strip()
+            if action:
+                result.append(f"_ {action} _")
+        # Nếu là lời thoại thông thường
+        else:
+            dialog = part.strip()
+            if dialog:
+                result.append(f"**{dialog}**")
+    
+    return "\n".join(result)

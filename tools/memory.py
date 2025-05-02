@@ -5,7 +5,7 @@ from typing import List, Dict
 import uuid
 import json
 
-MAX_HISTORY_TURNS = 50  # Mỗi turn = user + assistant
+MAX_HISTORY_TURNS = 10  # Mỗi turn = user + assistant
 
 def trim_history(history: List[Dict[str, str]]) -> List[Dict[str, str]]:
     # """Giới hạn số lượt trò chuyện trong lịch sử."""
@@ -72,5 +72,5 @@ class VectorHistory:
         return results["documents"][0]
 
 # Singleton instance
-vector_history = VectorHistory()
-print(vector_history.get_recent_history("1363497131637211166"))
+# vector_history = VectorHistory()
+# print(vector_history.get_recent_history("1363497131637211166"))

@@ -1,9 +1,9 @@
 from datetime import datetime
 from youtube_search import YoutubeSearch
 import ollama
+import config
 
 
-MODEL_NAME = "gemma3:4b"
 
 def calendar_tool() -> str:
     today = datetime.now()
@@ -25,7 +25,7 @@ def smart_agent(user_message: str):
     """
 
     # Gọi LLM để quyết định hành động
-    decision = ollama.generate(model=MODEL_NAME, prompt=decision_prompt, options={"temperature": 0.0, "num_gpu": 1, "low_vram": True})
+    decision = ollama.generate(model=config.MODEL_NAME, prompt=decision_prompt)
     # .strip().lower()
     print(f"Decision: {decision.response}")
     if "direct_answer" in decision.response:
@@ -41,7 +41,7 @@ def smart_agent(user_message: str):
         youtube_results = search_youtube(query['action_input'])
         if not youtube_results:
             return [{"role": "assistant", "content": "Không tìm thấy video phù hợp 😢"}, user_message]
-        youtube_results = "\n".join([f"""{r['title']} {r['duration']} {r['url']}""" for r in youtube_results])
+        youtube_results = "\n".join([f"""title: {r['title']} duration: {r['duration']} url: {r['url']}""" for r in youtube_results])
         user_message = [{"role": "assistant", "content": f"Kết quả tìm kiếm: {youtube_results}"}, user_message]
         return user_message
 
