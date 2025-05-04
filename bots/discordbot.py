@@ -56,21 +56,6 @@ async def send_info(ctx):
     
     await ctx.send(embed=embed)
 
-# @bot.command(name="hana")
-# async def hana(ctx, *, query):
-#     """Search YouTube for videos."""
-#     videos = agent_tools.search_youtube(query)
-#     view = View()
-    
-#     for idx, video in enumerate(videos[:5]):  # Limit to 5 buttons
-#         button = Button(
-#             label=f"{idx+1}. {video['title'][:50]}...",
-#             url=video['url'],  # YouTube link button
-#             style=discord.ButtonStyle.link
-#         )
-#         view.add_item(button)
-    
-#     await ctx.send(f"🔍 Kết quả tìm kiếm: '{query}'", view=view)
 @bot.command(name="hana")
 async def hana(ctx, *, query):
     """Tìm kiếm video YouTube với giao diện nhúng (embed)"""
@@ -98,7 +83,7 @@ async def hana(ctx, *, query):
             # Sử dụng avatar mặc định nếu người dùng không có
             avatar_url = ctx.author.avatar.url if ctx.author.avatar else ctx.author.default_avatar.url
             
-            # embed.set_thumbnail(url="https://i.imgur.com/Jr6Qf6n.gif")  # Ảnh thumbnail
+            # embed.set_thumbnail(url="https://image.cdn2.seaart.me/2025-05-04/d0bf765e878c738jp670/d3e8a8d77a85c89141f08043869e5c08_high.webp")  # Ảnh thumbnail
             embed.set_footer(text=f"Yêu cầu bởi {ctx.author.display_name}", icon_url=avatar_url)
             
             # Tạo View với các nút bấm
@@ -111,13 +96,14 @@ async def hana(ctx, *, query):
                     f"👀 {video.get('views', 'N/A')} | ⏱️ {video.get('duration', 'N/A')}\n\n"
                 )
                 
-                # button = discord.ui.Button(
-                #     label=f"Video {idx+1}",
-                #     style=discord.ButtonStyle.link,
-                #     url=video['url'],
-                #     emoji="▶️"
-                # )
-                # view.add_item(button)
+                button = discord.ui.Button(
+                    label=f"Video {idx+1}",
+                    style=discord.ButtonStyle.link,
+                    url=video['url'],
+                    emoji="▶️",
+                    row=0
+                )
+                view.add_item(button)
             
             await ctx.send(embed=embed, view=view)
             

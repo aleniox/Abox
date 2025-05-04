@@ -1,104 +1,144 @@
 import discord
 from discord.ext import commands
-from discord.ui import Button, View, Select
+from discord.ui import Button, View
+import random
+import os
+from dotenv import load_dotenv
 
+# Load environment variables
+load_dotenv()
+TOKEN = os.getenv('DISCORD_TOK')
+
+# Bot setup
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Biểu cảm bằng embed và emoji
-@bot.command()
-async def hana(ctx, action: str = None):
-    """Hiển thị biểu cảm của Hana"""
-    if not action:
-        # Hiển thị menu nếu không có action cụ thể
-        view = View()
-        view.add_item(ExpressionMenu())
-        await ctx.send("**Chọn biểu cảm của Hana:**", view=view)
-        return
-
-    action = action.lower()
-    expressions = {
-        "nhăn_mặt": {
-            "text": "*Hana nhăn mặt một chút, nhìn vào màn hình điện thoại* <a:blush:123456789>",
-            "image": "https://i.imgur.com/wince.gif"
+# Character Configuration
+class HanaCharacter:
+    # Basic Info
+    NAME = "Hana"
+    NICKNAME = "Hana-chan"
+    AGE = "18"
+    GENDER = "Nữ"
+    THEME_COLOR = 0xFFB6C1  # Pastel Pink
+    AVATAR_URL = "https://i.imgur.com/Jr6Qf6n.gif"
+    
+    # Expressions
+    EXPRESSIONS = {
+        "happy": {
+            "text": "*Hana cười khúc khích*",
+            "emoji": "😊",
+            "image": "https://image.cdn2.seaart.me/2025-05-04/d0bfnode878c739d7ks0/842ceab6c2991f0469f9698abd886e07_high.webp"
         },
-        "ngạc_nhiên": {
-            "text": "Ôi trời đất thương thiên! Em ơi, sao em lại hỏi tớ mấy lần thế hả?",
-            "image": "https://i.imgur.com/surprise.gif"
+        "surprised": {
+            "text": "*Hana giật mình, mắt mở to*",
+            "emoji": "😳",
+            "image": "https://image.cdn2.seaart.me/2025-05-04/d0bfpste878c738ai7kg/3787d2a0b397a8752ebece478044be44_high.webp"
         },
-        "cười": {
-            "text": "*Hana cười khúc khích một mình* Cậu đúng là... <:hana_laugh:123456790>",
-            "image": "https://i.imgur.com/giggle.gif"
+        "embarrassed": {
+            "text": "*Hana đỏ mặt, nhìn xuống đất*",
+            "emoji": "😖",
+            "image": "https://image.cdn2.seaart.me/2025-05-04/d0bfq8de878c739dp8vg/755c829266fe9b6fd6f3f03f5f974e49_high.webp"
         },
-        "buổi_tối": {
-            "text": """
-            🌙 *Bây giờ là gần 10 giờ tối rồi đó!*
-            > "Cậu có muốn tớ làm gì khác không..."
-            > *Hana cười khúc khích* 
-            ||hay là... tớ nên đi ngủ bây giờ?||
-            """,
-            "image": "https://i.imgur.com/night_hana.png"
-        }
+        "sad": {
+            "text": "*Hana cúi đầu, giọng nhỏ dần*",
+            "emoji": "😢",
+            "image": "https://image.cdn2.seaart.me/2025-05-04/d0bfs7le878c73ddt3ug/7b7031d8eb9fce5dcc329059fc9603eb_high.webp"
+        },
     }
 
-    if action not in expressions:
-        await ctx.send(f"Biểu cảm '{action}' không tồn tại. Thử !hana để xem menu.")
-        return
-
-    embed = discord.Embed(description=expressions[action]["text"], color=0xffb6c1)
-    if expressions[action]["image"]:
-        embed.set_image(url=expressions[action]["image"])
-    
-    # Thêm nút tương tác cho buổi tối
-    if action == "buổi_tối":
-        view = View()
-        view.add_item(Button(label="Chúc ngủ ngon", emoji="🛌", style=discord.ButtonStyle.blurple))
-        await ctx.send(embed=embed, view=view)
-    else:
+# Display System
+class HanaDisplay:
+    @staticmethod
+    async def show_expression(ctx, mood: str):
+        """Show Hana's expression"""
+        expr = HanaCharacter.EXPRESSIONS.get(mood, HanaCharacter.EXPRESSIONS["happy"])
+        
+        embed = discord.Embed(
+            description=f"{expr['emoji']} {expr['text']}",
+            color=HanaCharacter.THEME_COLOR
+        )
+        embed.set_image(url=expr["image"])
+        embed.set_footer(
+            text=f"{HanaCharacter.NAME} • {HanaCharacter.NICKNAME}",
+            icon_url=HanaCharacter.AVATAR_URL
+        )
+        
         await ctx.send(embed=embed)
 
-# Menu chọn biểu cảm
-class ExpressionMenu(Select):
-    def __init__(self):
-        options = [
-            discord.SelectOption(label="Nhăn mặt", value="nhăn_mặt", emoji="😖"),
-            discord.SelectOption(label="Ngạc nhiên", value="ngạc_nhiên", emoji="😳"),
-            discord.SelectOption(label="Cười khúc khích", value="cười", emoji="😂"),
-            discord.SelectOption(label="Buổi tối", value="buổi_tối", emoji="🌙")
-        ]
-        super().__init__(placeholder="Chọn biểu cảm...", options=options)
+    @staticmethod
+    async def show_random_expression(ctx):
+        """Show random Hana expression"""
+        mood = random.choice(list(HanaCharacter.EXPRESSIONS.keys()))
+        await HanaDisplay.show_expression(ctx, mood)
 
-    async def callback(self, interaction: discord.Interaction):
-        await interaction.response.defer()
-        await hana(interaction.channel, self.values[0])
+# Commands
+@bot.command(name="hana")
+async def hana_command(ctx):
+    """Random Hana expression"""
+    await HanaDisplay.show_random_expression(ctx)
 
-# Lệnh help tùy chỉnh
-@bot.command(name="help_hana")
-async def hana_help(ctx):
-    """Hướng dẫn sử dụng biểu cảm Hana"""
+@bot.command(name="express")
+async def express_command(ctx, mood: str = None):
+    """Show specific expression
+    Usage: !express [happy/surprised/embarrassed/sad]
+    """
+    if mood and mood in HanaCharacter.EXPRESSIONS:
+        await HanaDisplay.show_expression(ctx, mood)
+    else:
+        await ctx.send(f"Vui lòng chọn một trong các biểu cảm: {', '.join(HanaCharacter.EXPRESSIONS.keys())}")
+
+@bot.command(name="info")
+async def info_command(ctx):
+    """Show Hana's info"""
     embed = discord.Embed(
-        title="Hướng dẫn biểu cảm Hana",
-        color=0xff66b2
+        title=f"🌸 Thông tin về {HanaCharacter.NAME}",
+        color=HanaCharacter.THEME_COLOR
     )
-    embed.add_field(
-        name="Các lệnh chính",
-        value="• `!hana` - Menu biểu cảm\n"
-              "• `!hana nhăn_mặt` - Biểu cảm nhăn mặt\n"
-              "• `!hana ngạc_nhiên` - Ngạc nhiên\n"
-              "• `!hana cười` - Cười khúc khích\n"
-              "• `!hana buổi_tối` - Tương tác buổi tối",
-        inline=False
-    )
-    embed.set_thumbnail(url="https://i.imgur.com/hana_icon.png")
-    await ctx.send(embed=embed)
+    
+    embed.add_field(name="Tên", value=HanaCharacter.NAME, inline=True)
+    embed.add_field(name="Biệt danh", value=HanaCharacter.NICKNAME, inline=True)
+    embed.add_field(name="Tuổi", value=HanaCharacter.AGE, inline=True)
+    
+    embed.set_thumbnail(url=HanaCharacter.AVATAR_URL)
+    embed.set_image(url="https://i.imgur.com/banner_hana.png")
+    
+    # Create interaction buttons
+    view = View()
+    for mood, expr in HanaCharacter.EXPRESSIONS.items():
+        button = Button(
+            label=expr["text"][1:-1],  # Remove asterisks
+            emoji=expr["emoji"],
+            style=discord.ButtonStyle.secondary,
+            custom_id=f"expr_{mood}"
+        )
+        view.add_item(button)
+    
+    await ctx.send(embed=embed, view=view)
 
+# Button Interactions
+@bot.event
+async def on_interaction(interaction):
+    if interaction.type == discord.InteractionType.component:
+        custom_id = interaction.data.get("custom_id", "")
+        
+        if custom_id.startswith("expr_"):
+            mood = custom_id[5:]
+            if mood in HanaCharacter.EXPRESSIONS:
+                await HanaDisplay.show_expression(interaction, mood)
+                await interaction.response.defer()
+
+# Run Bot
 @bot.event
 async def on_ready():
     print(f'Bot {bot.user.name} đã sẵn sàng!')
-    await bot.change_presence(activity=discord.Activity(
-        type=discord.ActivityType.watching,
-        name="!help_hana"
-    ))
+    await bot.change_presence(
+        activity=discord.Activity(
+            type=discord.ActivityType.watching,
+            name=f"{HanaCharacter.NICKNAME} | !help"
+        )
+    )
 
-bot.run('YOUR_BOT_TOKEN')
+if __name__ == "__main__":
+    bot.run(TOKEN)
