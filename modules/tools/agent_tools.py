@@ -2,6 +2,8 @@ from datetime import datetime
 from youtube_search import YoutubeSearch
 import ollama
 import modules.config as config
+import json
+
 
 
 def calendar_tool() -> str:
@@ -35,7 +37,6 @@ def smart_agent(user_message: str):
         return user_message
     elif "youtube_search" in decision.response:
         # Tìm kiếm video trên Youtube
-        import json
         query = json.loads(decision.response)
         youtube_results = search_youtube(query['action_input'])
         if not youtube_results:
@@ -44,12 +45,13 @@ def smart_agent(user_message: str):
         user_message = [{"role": "assistant", "content": f"Kết quả tìm kiếm: {youtube_results}"}, user_message]
         return user_message
 
-def search_youtube(query, limit=3):
+def search_youtube(query, limit=5):
     results = YoutubeSearch(query, max_results=limit).to_dict()
     return [{
         "title": r['title'],
         "duration": r['duration'],
-        "url": f"https://youtu.be/{r['id']}"
+        "url": f"https://youtu.be/{r['id']}",
+        "views": r['views']
     } for r in results]
 
 

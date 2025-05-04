@@ -91,7 +91,6 @@ def chat(session_id , message: str = "", image_path: Optional[List[str]] = None,
     messages = memory.trim_history(HISTORY_CHAT +  agent_message)
     # print(messages)
     # messages = vector_history.get_recent_history(0000, limit=50)
-    # try:
     response = ""
     stream = ollama.chat(model=MODEL_NAME, messages=messages, stream=True, options={"num_gpu":1, "low_vram": True})
     for chunk in stream:

@@ -8,7 +8,7 @@ import asyncio
 from pathlib import Path
 
 from dotenv import load_dotenv
-import modules.tools as tools
+import modules.tools.tools as tools
 import modules.tools.agent_tools as agent_tools
 import modules.core.llm_chain as llm_chain
 import modules.config as config
@@ -40,22 +40,13 @@ connection_retries = 0
 MAX_RETRIES = 5
 RETRY_DELAY = 5  # seconds
 
-@bot.event
-async def on_ready():
-    """Log when the bot is ready and reset connection retries."""
-    global connection_retries
-    connection_retries = 0
-    logger.info(f"Bot logged in as {bot.user} (ID: {bot.user.id})")
-    logger.info(f"Connected to {len(bot.guilds)} guild(s)")
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="your requests"))
-
 @bot.command(name="info")
 async def send_info(ctx):
     """Gửi tin nhắn embed đẹp mắt"""
     embed = Embed(
         title="🎉 Chào mừng đến với Hana Bot",
         description=f"Tôi là trợ lý ảo của {ctx.author.display_name} trên Discord!",
-        color=Color.purple()
+        color=Color.fuchsia()
     )
     
     embed.set_thumbnail(url="https://image.cdn2.seaart.me/2025-05-03/d0b1a4de878c73a4afrg/41459208059d8a6591789e1751030de8_high.webp")
@@ -64,6 +55,89 @@ async def send_info(ctx):
     embed.set_footer(text="Hana Bot © 2025")
     
     await ctx.send(embed=embed)
+
+# @bot.command(name="hana")
+# async def hana(ctx, *, query):
+#     """Search YouTube for videos."""
+#     videos = agent_tools.search_youtube(query)
+#     view = View()
+    
+#     for idx, video in enumerate(videos[:5]):  # Limit to 5 buttons
+#         button = Button(
+#             label=f"{idx+1}. {video['title'][:50]}...",
+#             url=video['url'],  # YouTube link button
+#             style=discord.ButtonStyle.link
+#         )
+#         view.add_item(button)
+    
+#     await ctx.send(f"🔍 Kết quả tìm kiếm: '{query}'", view=view)
+@bot.command(name="hana")
+async def hana(ctx, *, query):
+    """Tìm kiếm video YouTube với giao diện nhúng (embed)"""
+    try:
+        # Hiển thị thông báo đang tìm kiếm (cách mới)
+        async with ctx.typing():
+            # Lấy kết quả từ YouTube
+            videos = agent_tools.search_youtube(query)
+            
+            if not videos:
+                embed = discord.Embed(
+                    title="❌ Không tìm thấy kết quả",
+                    description=f"Không có video nào phù hợp với từ khóa `{query}`",
+                    color=discord.Color.red()
+                )
+                return await ctx.send(embed=embed)
+            
+            # Tạo Embed chính
+            embed = discord.Embed(
+                title=f"🔍 Kết quả tìm kiếm: '{query}'",
+                description="",
+                color=discord.Color.fuchsia()
+            )
+            
+            # Sử dụng avatar mặc định nếu người dùng không có
+            avatar_url = ctx.author.avatar.url if ctx.author.avatar else ctx.author.default_avatar.url
+            
+            # embed.set_thumbnail(url="https://i.imgur.com/Jr6Qf6n.gif")  # Ảnh thumbnail
+            embed.set_footer(text=f"Yêu cầu bởi {ctx.author.display_name}", icon_url=avatar_url)
+            
+            # Tạo View với các nút bấm
+            view = discord.ui.View()
+            
+            # Thêm thông tin video vào Embed và tạo nút
+            for idx, video in enumerate(videos[:5]):
+                embed.description += (
+                    f"**{idx+1}. [{video['title'][:50]}...]({video['url']})**\n"
+                    f"👀 {video.get('views', 'N/A')} | ⏱️ {video.get('duration', 'N/A')}\n\n"
+                )
+                
+                # button = discord.ui.Button(
+                #     label=f"Video {idx+1}",
+                #     style=discord.ButtonStyle.link,
+                #     url=video['url'],
+                #     emoji="▶️"
+                # )
+                # view.add_item(button)
+            
+            await ctx.send(embed=embed, view=view)
+            
+    except Exception as e:
+        error_embed = discord.Embed(
+            title="⚠️ Lỗi khi tìm kiếm",
+            description=f"Đã xảy ra lỗi: {str(e)}",
+            color=discord.Color.red()
+        )
+        await ctx.send(embed=error_embed)
+        print(f"[LỖI] Trong lệnh hana: {type(e).__name__}: {e}")
+
+@bot.event
+async def on_ready():
+    """Log when the bot is ready and reset connection retries."""
+    global connection_retries
+    connection_retries = 0
+    logger.info(f"Bot logged in as {bot.user} (ID: {bot.user.id})")
+    logger.info(f"Connected to {len(bot.guilds)} guild(s)")
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="your requests"))
 
 @bot.event
 async def on_disconnect():
@@ -102,22 +176,6 @@ async def run_bot():
         else:
             # Clean exit
             break
-
-@bot.command(name="hana")
-async def hana(ctx, *, query):
-    """Search YouTube for videos."""
-    videos = agent_tools.search_youtube(query)
-    view = View()
-    
-    for idx, video in enumerate(videos[:5]):  # Limit to 5 buttons
-        button = Button(
-            label=f"{idx+1}. {video['title'][:50]}...",
-            url=video['url'],  # YouTube link button
-            style=discord.ButtonStyle.link
-        )
-        view.add_item(button)
-    
-    await ctx.send(f"🔍 Kết quả tìm kiếm: '{query}'", view=view)
 
 @bot.event
 async def on_message(message):
@@ -163,9 +221,9 @@ async def on_message(message):
             try:
                 if image_paths:
                     image_urls = [att.url for att in message.attachments if att.content_type.startswith("image/")]
-                    await message.channel.send(f"📷 Nhận được {len(image_urls)} ảnh: {', '.join(image_urls)}")
+                    await message.channel.send(f"📷 Nhận được {len(image_urls)} ảnh của {message.author.display_name}: {', '.join(image_urls)}")
                 if audio_paths:
-                    await message.channel.send(f"🎤 Nhận được {len(audio_paths)} tin nhắn thoại.")
+                    await message.channel.send(f"🎤 Nhận được {len(audio_paths)} tin nhắn thoại của {message.author.display_name}.")
                 
                 # Call LLM with text and/or image paths
                 response = await loop.run_in_executor(
