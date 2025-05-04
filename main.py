@@ -1,0 +1,33 @@
+import bots.discordbot as discordbot
+import asyncio
+import logging
+import modules.core.llm_chain as llm_chain
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
+def main():
+    """Start the bot with reconnection handling."""
+    llm_chain.start_ollama_server()
+    logger.info("Starting Discord bot with reconnection handling...")
+    
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    try:
+        loop.run_until_complete(discordbot.run_bot())
+    except KeyboardInterrupt:
+        logger.info("Received keyboard interrupt. Shutting down...")
+    except Exception as e:
+        logger.error(f"Fatal error: {e}")
+    finally:
+        loop.run_until_complete(discordbot.bot.close())
+        loop.close()
+        logger.info("Bot has shut down.")
+
+if __name__ == "__main__":
+    main()

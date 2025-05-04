@@ -1,13 +1,12 @@
 from datetime import datetime
 from youtube_search import YoutubeSearch
 import ollama
-import config
-
+import modules.config as config
 
 
 def calendar_tool() -> str:
     today = datetime.now()
-    return f"Thông tin lịch: hiện tại là {today.strftime('%H:%M %A %d/%m/%Y')}"
+    return f"Thông tin thời gian hiện tại là {today.strftime('%H:%M %A %d/%m/%Y')}"
 
 def smart_agent(user_message: str):
     """Xử lý câu hỏi, quyết định dùng tool hay LLM trả lời trực tiếp"""
@@ -15,7 +14,7 @@ def smart_agent(user_message: str):
     decision_prompt = f"""
     Bạn là một trợ lý AI thông minh. Hãy phân tích câu hỏi sau và quyết định cách xử lý:
     Bạn được cung cấp các công cụ sau:
-    - calender: Kiểm tra ngày tháng, thời gian
+    - calender: Kiểm tra ngày tháng, thời gian, giờ, phút, giây
     - direct_answer: nếu không cần thiết sử dụng công cụ nào, hãy trả lời trực tiếp bằng tiếng Việt.
     - youtube_search: để tìm kiếm video hoặc nghe nhạc
     Trả lời ngắn gọn không được quyết định lung tung phải có căn cứ để trả lời.

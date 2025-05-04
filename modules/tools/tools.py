@@ -23,5 +23,7 @@ def format_discord_message(text):
             dialog = part.strip()
             if dialog:
                 result.append(f"**{dialog}**")
-    
-    return "\n".join(result)
+    output = "\n".join(result)
+    if "$$" in result:
+        output.replace("$$", " ")
+    return output

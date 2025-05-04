@@ -4,10 +4,12 @@ import os
 import ollama
 import logging
 from typing import Optional, List, Dict
-import tools.memory as memory
-import tools.speech2text as speech2text
-import tools.agent_tools as agent_tools
-import config
+import modules.memory as memory
+import modules.tools.speech2text as speech2text
+import modules.tools.agent_tools as agent_tools
+import modules.config as config
+import json
+
 
 
 # --- Cấu hình logging ---
@@ -18,16 +20,18 @@ logger = logging.getLogger("llm_chain")
 MODEL_NAME = config.MODEL_NAME
 
 try:
-    from prompt import prompt_system
+    from modules.core.prompt import prompt_system
 except ImportError:
     logger.warning("prompt.py not found. Using default system prompt.")
     prompt_system = "You are a helpful AI assistant that can analyze images."
 
 # --- Lịch sử chat ---
-vector_history = memory.VectorHistory()
+# vector_history = memory.VectorHistory()
 HISTORY_CHAT: List[Dict[str, str]] = [{"role": "system", "content": prompt_system}]
-
-
+with open("simple_memory/history_chat.json", "r", encoding="utf-8") as f:
+    LOAD_HISTORY = json.load(f)
+HISTORY_CHAT = HISTORY_CHAT + LOAD_HISTORY
+# print(HISTORY_CHAT)
 def start_ollama_server() -> None:
     # """Khởi động Ollama và pull model."""
     try:
@@ -80,8 +84,8 @@ def chat(session_id , message: str = "", image_path: Optional[List[str]] = None,
     if not user_message["content"] and "images" not in user_message:
         return "⚠️ Vui lòng cung cấp văn bản hoặc ít nhất một ảnh hợp lệ."
 
-    # agent_message = agent_tools.smart_agent(user_message)
-    agent_message = [user_message]
+    agent_message = agent_tools.smart_agent(user_message)
+    # agent_message = [user_message]
     print(f"🗨️ Tin nhắn sau khi xử lý: {agent_message}")
     # print(HISTORY_CHAT +  agent_message)
     messages = memory.trim_history(HISTORY_CHAT +  agent_message)
@@ -100,6 +104,8 @@ def chat(session_id , message: str = "", image_path: Optional[List[str]] = None,
     assistant_message = {"role": "assistant", "content": response}
     # vector_history.add_message(session_id, assistant_message)
     HISTORY_CHAT.extend([user_message, assistant_message])
+    with open("simple_memory/history_chat.json", "w", encoding="utf-8") as f:
+        json.dump(HISTORY_CHAT[1:], f, ensure_ascii=False, indent=2)
     return response
 
 # --- CLI ---
