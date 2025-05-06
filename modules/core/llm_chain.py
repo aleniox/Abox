@@ -11,39 +11,48 @@ import modules.config as config
 import json
 
 
-
 # --- Cấu hình logging ---
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s", encoding="utf-8")
+logging.basicConfig(level=logging.INFO,
+                    format="%(asctime)s - %(levelname)s - %(message)s", encoding="utf-8")
 logger = logging.getLogger("llm_chain")
 
 # --- Cấu hình model và prompt ---
 MODEL_NAME = config.MODEL_NAME
 
 try:
-    from modules.core.prompt import prompt_system
+    from modules.templates import prompt_system
+    # from modules.core.prompt import prompt_system
 except ImportError:
     logger.warning("prompt.py not found. Using default system prompt.")
     prompt_system = "You are a helpful AI assistant that can analyze images."
 
 # --- Lịch sử chat ---
 # vector_history = memory.VectorHistory()
-HISTORY_CHAT: List[Dict[str, str]] = [{"role": "system", "content": prompt_system}]
-with open("simple_memory/history_chat.json", "r", encoding="utf-8") as f:
-    LOAD_HISTORY = json.load(f)
+HISTORY_CHAT: List[Dict[str, str]] = [
+    {"role": "system", "content": prompt_system}]
+if os.path.exists(config.MEMORY_CHAT_PATH):
+    with open(config.MEMORY_CHAT_PATH, "r", encoding="utf-8") as f:
+        LOAD_HISTORY = json.load(f)
+else:
+    LOAD_HISTORY = []
 HISTORY_CHAT = HISTORY_CHAT + LOAD_HISTORY
 # print(HISTORY_CHAT)
+
+
 def start_ollama_server() -> None:
     # """Khởi động Ollama và pull model."""
     try:
         logger.info("Starting Ollama server...")
-        subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.Popen(["ollama", "serve"],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         time.sleep(1)
 
         # logger.info(f"Pulling model: {MODEL_NAME}")
         # subprocess.run(["ollama", "pull", MODEL_NAME], check=True, capture_output=True, text=True)
         logger.info(f"Model '{MODEL_NAME}' is ready.")
     except FileNotFoundError:
-        logger.error("❌ Ollama không được tìm thấy. Cài đặt tại: https://ollama.com/download")
+        logger.error(
+            "❌ Ollama không được tìm thấy. Cài đặt tại: https://ollama.com/download")
         raise
     except subprocess.CalledProcessError as e:
         logger.error(f"❌ Không thể pull model {MODEL_NAME}: {e.stderr}")
@@ -52,7 +61,8 @@ def start_ollama_server() -> None:
         logger.error(f"❌ Lỗi khởi động Ollama: {e}")
         raise
 
-def chat(session_id , message: str = "", image_path: Optional[List[str]] = None, audio_path: str = None) -> str:
+
+def chat(session_id, message: str = "", image_path: Optional[List[str]] = None, audio_path: str = None) -> str:
     global HISTORY_CHAT
     logger.info("🧠 Đang xử lý yêu cầu chat...")
 
@@ -75,7 +85,8 @@ def chat(session_id , message: str = "", image_path: Optional[List[str]] = None,
         text = speech2text.process_voice_message(audio_path)
         if text:
             user_message["content"] = text
-            logger.info(f"🎤 Đã chuyển đổi tin nhắn thoại thành văn bản: {text}")
+            logger.info(
+                f"🎤 Đã chuyển đổi tin nhắn thoại thành văn bản: {text}")
         else:
             logger.warning("⚠️ Không thể chuyển đổi tin nhắn thoại.")
             return "⚠️ Không thể chuyển đổi tin nhắn thoại."
@@ -88,11 +99,12 @@ def chat(session_id , message: str = "", image_path: Optional[List[str]] = None,
     # agent_message = [user_message]
     print(f"🗨️ Tin nhắn sau khi xử lý: {agent_message}")
     # print(HISTORY_CHAT +  agent_message)
-    messages = memory.trim_history(HISTORY_CHAT +  agent_message)
+    messages = memory.trim_history(HISTORY_CHAT + agent_message)
     # print(messages)
     # messages = vector_history.get_recent_history(0000, limit=50)
     response = ""
-    stream = ollama.chat(model=MODEL_NAME, messages=messages, stream=True, options={"num_gpu":1, "low_vram": True})
+    stream = ollama.chat(model=MODEL_NAME, messages=messages,
+                         stream=True, options={"num_gpu": 1, "low_vram": True})
     for chunk in stream:
         content = chunk.get("message", {}).get("content", "")
         if content:
@@ -103,9 +115,10 @@ def chat(session_id , message: str = "", image_path: Optional[List[str]] = None,
     assistant_message = {"role": "assistant", "content": response}
     # vector_history.add_message(session_id, assistant_message)
     HISTORY_CHAT.extend([user_message, assistant_message])
-    with open("simple_memory/history_chat.json", "w", encoding="utf-8") as f:
+    with open(config.MEMORY_CHAT_PATH, "w", encoding="utf-8") as f:
         json.dump(HISTORY_CHAT[1:], f, ensure_ascii=False, indent=2)
     return response
+
 
 # --- CLI ---
 if __name__ == "__main__":

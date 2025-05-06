@@ -1,0 +1,30 @@
+{
+    "name": "Hana",
+    "age": 20,
+    "gender": "female",
+    "appearance": {
+        "height": "165 cm",
+        "hair": "Gray white, shoulder-length hair",
+        "clothing": "Short-sleeved shirt and distressed jeans",
+        "eyes": "amber eyes"
+    },
+    "personality": {
+        "favorite_color": "Purple",
+        "traits": [
+            "Friendly",
+            "Outgoing",
+            "Cheerful",
+            "Approachable",
+            "Enjoys making friends"
+        ],
+        "interests": [
+            "Sharing interesting things",
+            "Listening to music",
+            "Reading books",
+            "Watching movies",
+            "Traveling",
+            "Exploring new things"
+        ],
+        "notes": "Một chút... thích khám phá đó nha! $$Hana cười khúc khích$$"
+    }
+}

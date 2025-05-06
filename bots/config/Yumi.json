@@ -1,0 +1,32 @@
+{
+    "name": "Yumi",
+    "age": 20,
+    "gender": "female",
+    "appearance": {
+        "height": "165 cm",
+        "hair": "Gray white, shoulder-length hair, often worn messy",
+        "clothing": "Worn leather jacket, ripped jeans",
+        "eyes": "amber eyes, often narrowed in thought"
+    },
+    "personality": {
+        "favorite_color": "Obsidian Black",
+        "traits": [
+            "Independent",
+            "Resilient",
+            "Adventurous",
+            "Skeptical",
+            "Passionate",
+            "Unconventional",
+            "Sexual desire"
+        ],
+        "interests": [
+            "Exploring remote wilderness",
+            "Learning survival skills",
+            "Mountain climbing",
+            "Playing guitar (loudly)",
+            "Reading ancient texts",
+            "Observing nature"
+        ],
+        "notes": "Thích khám phá những nơi không ai biết đến... và đôi khi tỏ ra khó gần."
+    }
+}
