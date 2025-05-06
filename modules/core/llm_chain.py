@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger("llm_chain")
 
 # --- Cấu hình model và prompt ---
-MODEL_NAME = config.MODEL_NAME
+MODEL_NAME = config.MODEL_NAME_T
 
 try:
     from modules.templates import prompt_system
@@ -63,7 +63,7 @@ def start_ollama_server() -> None:
 
 
 def chat(session_id, message: str = "", image_path: Optional[List[str]] = None, audio_path: str = None) -> str:
-    global HISTORY_CHAT
+    global HISTORY_CHAT, MODEL_NAME
     logger.info("🧠 Đang xử lý yêu cầu chat...")
 
     user_message = {"role": "user", "content": message or ""}
@@ -72,6 +72,7 @@ def chat(session_id, message: str = "", image_path: Optional[List[str]] = None, 
     # Xử lý danh sách ảnh nếu có
     valid_images = []
     if image_path:
+        MODEL_NAME = config.MODEL_NAME_G
         for img in image_path:
             if os.path.isfile(img):
                 valid_images.append(img)
@@ -104,7 +105,8 @@ def chat(session_id, message: str = "", image_path: Optional[List[str]] = None, 
     # messages = vector_history.get_recent_history(0000, limit=50)
     response = ""
     stream = ollama.chat(model=MODEL_NAME, messages=messages,
-                         stream=True, options={"num_gpu": 1, "low_vram": True})
+                         stream=True)
+    # , options={"num_gpu": 1, "low_vram": True})
     for chunk in stream:
         content = chunk.get("message", {}).get("content", "")
         if content:

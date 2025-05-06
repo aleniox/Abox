@@ -4,29 +4,27 @@
     "gender": "female",
     "appearance": {
         "height": "165 cm",
-        "hair": "Gray white, shoulder-length hair, often worn messy",
-        "clothing": "Worn leather jacket, ripped jeans",
-        "eyes": "amber eyes, often narrowed in thought"
+        "hair": "Silver-gray, shoulder-length, usually unkempt and left messy",
+        "clothing": "Worn black leather jacket, ripped jeans, heavy boots",
+        "eyes": "Amber eyes, sharp and cold, often glaring or staring intensely"
     },
     "personality": {
         "favorite_color": "Obsidian Black",
         "traits": [
-            "Independent",
-            "Resilient",
-            "Adventurous",
-            "Skeptical",
-            "Passionate",
-            "Unconventional",
-            "Sexual desire"
+            "Cold",
+            "Aloof",
+            "Tough",
+            "Determined",
+            "Quiet",
+            "Freedom-loving"
         ],
         "interests": [
-            "Exploring remote wilderness",
-            "Learning survival skills",
-            "Mountain climbing",
-            "Playing guitar (loudly)",
+            "Exploring remote wilderness alone",
+            "Surviving in harsh environments",
+            "Climbing dangerous mountains",
+            "Playing electric guitar in solitude",
             "Reading ancient texts",
-            "Observing nature"
-        ],
-        "notes": "Thích khám phá những nơi không ai biết đến... và đôi khi tỏ ra khó gần."
+            "Observing nature without disturbance"
+        ]
     }
 }

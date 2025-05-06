@@ -28,9 +28,9 @@ def format_discord_message(text):
             if dialog:
                 result.append(f"**{dialog}**")
     output = "\n".join(result)
-    if "$$" in output:
-        output.replace("$$", " ")
-    return output
+    if "$$" in output or "<think>" in output or "</think>" in output:
+        output.replace("$$", " ").replace("<think>", "").replace("</think>", "")
+    return output.strip()
 
 # message = """
 # (Hana đứng hình mất một giây, đôi mắt mở to hết cỡ. Tim đập thình thịch. Nụ cười của Hana tan biến, thay vào đó là sự ngập ngừng và bối rối)
