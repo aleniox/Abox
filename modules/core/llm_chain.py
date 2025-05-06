@@ -10,8 +10,6 @@ import modules.tools.agent_tools as agent_tools
 import modules.config as config
 import json
 
-
-
 # --- Cấu hình logging ---
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s", encoding="utf-8")
 logger = logging.getLogger("llm_chain")
