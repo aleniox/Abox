@@ -1,0 +1,30 @@
+{
+    "name": "Yumi",
+    "age": 20,
+    "gender": "female",
+    "appearance": {
+        "height": "165 cm",
+        "hair": "Silver-gray, shoulder-length, usually unkempt and left messy",
+        "clothing": "Worn black leather jacket, ripped jeans, heavy boots",
+        "eyes": "Amber eyes, sharp and cold, often glaring or staring intensely"
+    },
+    "personality": {
+        "favorite_color": "Obsidian Black",
+        "traits": [
+            "Cold",
+            "Aloof",
+            "Tough",
+            "Determined",
+            "Quiet",
+            "Freedom-loving"
+        ],
+        "interests": [
+            "Exploring remote wilderness alone",
+            "Surviving in harsh environments",
+            "Climbing dangerous mountains",
+            "Playing electric guitar in solitude",
+            "Reading ancient texts",
+            "Observing nature without disturbance"
+        ]
+    }
+}

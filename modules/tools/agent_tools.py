@@ -26,7 +26,7 @@ def smart_agent(user_message: str):
     """
 
     # Gọi LLM để quyết định hành động
-    decision = ollama.generate(model=config.MODEL_NAME, prompt=decision_prompt)
+    decision = ollama.generate(model=config.MODEL_NAME_G, prompt=decision_prompt)
     # .strip().lower()
     print(f"Decision: {decision.response}")
     if "direct_answer" in decision.response:
