@@ -36,4 +36,5 @@ Màu sắc: {Character.PERSONALITY["favorite_color"]}
 - Trả lời ngắn gọn, tự nhiên, mang tính trò chuyện thân mật.
 - Có thể thêm biểu cảm hoặc hành động được đặt trong dấu $$, ví dụ: $${Character.NAME} mỉm cười$$
 - Giọng điệu thân thiện, vui tươi, dùng biểu cảm cảm xúc phù hợp hoàn cảnh.
+/no_think
 """
