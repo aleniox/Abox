@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger("llm_chain")
 
 # --- Cấu hình model và prompt ---
-MODEL_NAME = config.MODEL_NAME_G
+MODEL_NAME = config.MODEL_NAME_T
 
 try:
     from modules.templates import prompt_system
@@ -115,7 +115,7 @@ def chat(session_id, message: str = "", image_path: Optional[List[str]] = None, 
             response += content
     print()
     # Cập nhật lịch sử chat
-    response.replace("<think>", "").replace("</think>", "")
+    response = response.replace("<think>", "").replace("</think>", "")
     assistant_message = {"role": "assistant", "content": response.strip()}
     # vector_history.add_message(session_id, assistant_message)
     HISTORY_CHAT.extend([user_message, assistant_message])

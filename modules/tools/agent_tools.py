@@ -13,7 +13,7 @@ def calendar_tool() -> str:
 def smart_agent(user_message: str):
     """Xử lý câu hỏi, quyết định dùng tool hay LLM trả lời trực tiếp"""
     # Prompt để LLM phân tích câu hỏi
-    decision_prompt = f"""
+    decision_prompt = f"""/no_think
     Bạn là một trợ lý AI thông minh. Hãy phân tích câu hỏi sau và quyết định cách xử lý:
     Bạn được cung cấp các công cụ sau:
     - calender: Kiểm tra ngày tháng, thời gian, giờ, phút, giây
@@ -26,9 +26,10 @@ def smart_agent(user_message: str):
     """
 
     # Gọi LLM để quyết định hành động
-    decision = ollama.generate(model=config.MODEL_NAME_G, prompt=decision_prompt)
+    decision = ollama.generate(model=config.MODEL_NAME_T, prompt=decision_prompt)
     # .strip().lower()
     print(f"Decision: {decision.response}")
+    decision.response = decision.response.replace("<think>", "").replace("</think>", "").strip()
     if "direct_answer" in decision.response:
         # Trả lời trực tiếp bằng LLM
         return [user_message]

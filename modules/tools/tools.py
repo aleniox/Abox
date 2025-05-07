@@ -25,6 +25,6 @@ def format_discord_message(text):
     output = "\n".join(result)
     # if "$$" in output or "<think>" in output or "</think>" in output:
     #     output.replace("$$", " ").replace("<think>", "").replace("</think>", "")
-    output = output.replace("$$", " ").replace("<think>", "").replace("</think>", "")
+    output = output.replace("$$", " ")
 
     return output.strip()
