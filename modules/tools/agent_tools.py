@@ -26,7 +26,7 @@ def smart_agent(user_message: str):
     """
 
     # Gọi LLM để quyết định hành động
-    decision = ollama.generate(model=config.MODEL_NAME_T, prompt=decision_prompt)
+    decision = ollama.generate(model=config.MODEL_NAME_T, prompt=decision_prompt, options={"temperature": 0.7})
     # .strip().lower()
     print(f"Decision: {decision.response}")
     decision.response = decision.response.replace("<think>", "").replace("</think>", "").strip()
@@ -43,7 +43,7 @@ def smart_agent(user_message: str):
         if not youtube_results:
             return [{"role": "assistant", "content": "Không tìm thấy video phù hợp 😢"}, user_message]
         youtube_results = "\n".join([f"""title: {r['title']} duration: {r['duration']} url: {r['url']}""" for r in youtube_results])
-        user_message = [{"role": "assistant", "content": f"Kết quả tìm kiếm: {youtube_results}"}, user_message]
+        user_message = [{"role": "tool", "content": f"Kết quả tìm kiếm: {youtube_results}"}, user_message]
         return user_message
 
 def search_youtube(query, limit=5):
