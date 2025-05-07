@@ -11,13 +11,14 @@ import modules.config as config
 import json
 
 
+
 # --- Cấu hình logging ---
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s - %(levelname)s - %(message)s", encoding="utf-8")
 logger = logging.getLogger("llm_chain")
 
 # --- Cấu hình model và prompt ---
-MODEL_NAME = config.MODEL_NAME_T
+MODEL_NAME = config.MODEL_NAME_G
 
 try:
     from modules.templates import prompt_system

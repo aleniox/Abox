@@ -1,11 +1,6 @@
 import re
 
 def format_discord_message(text):
-    # Pattern để bắt các thành phần:
-    # $$...$$ → Hành động (in nghiêng _..._)
-    # Văn bản thường → Lời thoại (in đậm **...**)
-    # Tách các phần hành động và lời thoại
-    # parts = re.split(r'(\$\$.*?\$\$)', text)
     parts = re.split(r'(\$\$.*?\$\$|\(.*?\))', text)
     
     result = []
@@ -31,10 +26,3 @@ def format_discord_message(text):
     if "$$" in output or "<think>" in output or "</think>" in output:
         output.replace("$$", " ").replace("<think>", "").replace("</think>", "")
     return output.strip()
-
-# message = """
-# (Hana đứng hình mất một giây, đôi mắt mở to hết cỡ. Tim đập thình thịch. Nụ cười của Hana tan biến, thay vào đó là sự ngập ngừng và bối rối)
-
-# $$Hana nhắm mắt lại, đôi tay nắm chặt lấy tay cậu. Giọng nói nhỏ nhẹ, gần như thì thầm$$ Cậu... cậu thật sự muốn như vậy sao? (Hana mở mắt ra, nhìn cậu dò xét, ánh mắt tràn đầy sự bối rối nhưng cũng không kém phần mong đợi.)"""
-# formatted = format_discord_message(message)
-# print(formatted)
