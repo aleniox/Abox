@@ -26,7 +26,7 @@ def smart_agent(user_message: str):
     """
 
     # Gọi LLM để quyết định hành động
-    decision = ollama.generate(model=config.MODEL_NAME_T, prompt=decision_prompt, options={"temperature": 0.7})
+    decision = ollama.generate(model=config.MODEL_NAME_G, prompt=decision_prompt)
     # .strip().lower()
     print(f"Decision: {decision.response}")
     decision.response = decision.response.replace("<think>", "").replace("</think>", "").strip()

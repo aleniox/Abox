@@ -2,8 +2,8 @@ import os
 DOWNLOAD_FOLDER = "downloads"
 DATA_FOLDER = "data/simple_memory"
 ALLOWED_EXTENSIONS = {"txt", "pdf", "png", "jpg", "jpeg", "gif"}
-MODEL_NAME_G = "gemma3:4b"
-MODEL_NAME_T = "qwen3:4b"
+# MODEL_NAME_T = "gemma3:4b"
+MODEL_NAME_G = "qwen3:4b"
 # "gemma3:12b-it-qat"
 CONFIG_CHARACTOR = r"bots\config\Hana.json"
 if not os.path.exists(DOWNLOAD_FOLDER):
