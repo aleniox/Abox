@@ -106,7 +106,7 @@ def chat(session_id, message: str = "", image_path: Optional[List[str]] = None, 
     # messages = vector_history.get_recent_history(0000, limit=50)
     response = ""
     stream = ollama.chat(model=MODEL_NAME, messages=messages,
-                         stream=True, options={"temperature": 0.7})
+                         stream=True, options={"num_ctx": 10000})
     for chunk in stream:
         content = chunk.get("message", {}).get("content", "")
         if content:
