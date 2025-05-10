@@ -13,7 +13,7 @@ def calendar_tool() -> str:
 def smart_agent(user_message: str):
     """Xử lý câu hỏi, quyết định dùng tool hay LLM trả lời trực tiếp"""
     # Prompt để LLM phân tích câu hỏi
-    decision_prompt = f"""
+    decision_prompt = f"""/no_think
     Bạn là một trợ lý AI thông minh. Hãy phân tích câu hỏi sau và quyết định cách xử lý:
     Bạn được cung cấp các công cụ sau:
     - calender: Kiểm tra ngày tháng, thời gian, giờ, phút, giây
@@ -29,6 +29,7 @@ def smart_agent(user_message: str):
     decision = ollama.generate(model=config.MODEL_NAME_G, prompt=decision_prompt)
     # .strip().lower()
     print(f"Decision: {decision.response}")
+    decision.response = decision.response.replace("<think>", "").replace("</think>", "").strip()
     if "direct_answer" in decision.response:
         # Trả lời trực tiếp bằng LLM
         return [user_message]
@@ -42,7 +43,7 @@ def smart_agent(user_message: str):
         if not youtube_results:
             return [{"role": "assistant", "content": "Không tìm thấy video phù hợp 😢"}, user_message]
         youtube_results = "\n".join([f"""title: {r['title']} duration: {r['duration']} url: {r['url']}""" for r in youtube_results])
-        user_message = [{"role": "assistant", "content": f"Kết quả tìm kiếm: {youtube_results}"}, user_message]
+        user_message = [{"role": "tool", "content": f"Kết quả tìm kiếm: {youtube_results}"}, user_message]
         return user_message
 
 def search_youtube(query, limit=5):
