@@ -4,8 +4,11 @@ DATA_FOLDER = "data/simple_memory"
 ALLOWED_EXTENSIONS = {"txt", "pdf", "png", "jpg", "jpeg", "gif"}
 # MODEL_NAME_T = "gemma3:4b"
 MODEL_NAME_G = "qwen3:4b"
+# "qwen3:1.7b"
 # "gemma3:12b-it-qat"
 CONFIG_CHARACTOR = r"bots\config\Hana.json"
+# r"bots\config\Yumi.json"
+# r"bots\config\Hana.json"
 if not os.path.exists(DOWNLOAD_FOLDER):
     os.makedirs(DOWNLOAD_FOLDER)
 if not os.path.exists(DATA_FOLDER):

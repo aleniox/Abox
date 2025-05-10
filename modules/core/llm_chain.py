@@ -114,7 +114,9 @@ def chat(session_id, message: str = "", image_path: Optional[List[str]] = None, 
             response += content
     print()
     # Cập nhật lịch sử chat
-    response = response.replace("<think>", "").replace("</think>", "")
+    # response = response.replace("<think>", "").replace("</think>", "")
+    import modules.tools.tools as tools
+    response = tools.remove_think_content(response)
     assistant_message = {"role": "assistant", "content": response.strip()}
     # vector_history.add_message(session_id, assistant_message)
     HISTORY_CHAT.extend([user_message, assistant_message])
