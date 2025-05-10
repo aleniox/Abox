@@ -8,11 +8,11 @@ import asyncio
 from pathlib import Path
 
 from dotenv import load_dotenv
-import modules.tools.tools as tools
+import modules.tools.tool_others as tool_others
 import modules.tools.agent_tools as agent_tools
-import modules.core.llm_chain as llm_chain
+import modules.core.agent_chat as agent_chat
 import modules.config as config
-import modules.tools.upload_media as upload_media
+import bots.upload_media as upload_media
 from discord import Embed, Color
 
 
@@ -214,7 +214,7 @@ async def on_message(message):
                 # Call LLM with text and/or image paths
                 response = await loop.run_in_executor(
                     None,
-                    llm_chain.chat,
+                    agent_chat.chat,
                     session_id,
                     message.content or "",
                     image_paths,
@@ -224,11 +224,11 @@ async def on_message(message):
                 logger.error(f"Error processing message: {e}")
                 if "Failed to connect to Ollama" in str(e):
                     try:
-                        llm_chain.start_ollama_server()
+                        agent_chat.start_ollama_server()
                         # Retry after restarting Ollama
                         response = await loop.run_in_executor(
                             None,
-                            llm_chain.chat,
+                            agent_chat.chat,
                             session_id,
                             message.content or "",
                             image_paths,
@@ -240,5 +240,5 @@ async def on_message(message):
                 else:
                     response = "⚠️ Có lỗi xảy ra khi xử lý yêu cầu."
             
-            response = tools.format_discord_message(response)
+            response = tool_others.format_discord_message(response)
             await message.channel.send(response)

@@ -1,4 +1,4 @@
-from . import tools
+from . import tool_others
 from . import agent_tools
-from . import upload_media
-from . import speech2text
+from bots import upload_media
+from ..core import speech2text
