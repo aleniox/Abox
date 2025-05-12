@@ -2,7 +2,6 @@ import ollama
 import modules.config as config
 import modules.tools.tool_searchs as tool_searchs
 import json
-import modules.tools.tool_search as tool_search
 
 
 def smart_agent(user_message: str):
@@ -31,13 +30,11 @@ def smart_agent(user_message: str):
         # Trả lời trực tiếp bằng LLM
         return [user_message]
     elif "calendar" in decision.response:
-        user_message = [{"role": "assistant", "content": tool_search.calendar_tool()}, user_message]
+        user_message = [{"role": "assistant", "content": tool_searchs.calendar_tool()}, user_message]
         return user_message
     elif "youtube_search" in decision.response:
         # Tìm kiếm video trên Youtube
         query = json.loads(decision.response)
-        youtube_results = tool_search.search_youtube(query['action_input'])
-
         youtube_results = tool_searchs.search_youtube(query['action_input'])
         if not youtube_results:
             return [{"role": "assistant", "content": "Không tìm thấy video phù hợp 😢"}, user_message]
@@ -46,7 +43,7 @@ def smart_agent(user_message: str):
         return user_message
     elif "web_search" in decision.response:
         query = json.loads(decision.response)
-        web_results = tool_search.search_with_ddgs(query['action_input'])
+        web_results = tool_searchs.search_with_ddgs(query['action_input'])
         user_message = [{"role": "assistant", "content": f"Kết quả tìm kiếm: {web_results}"}, user_message]
         return user_message
 
