@@ -12,7 +12,7 @@ import modules.tools.tools as tools
 import modules.tools.agent_tools as agent_tools
 import modules.core.llm_chain as llm_chain
 import modules.config as config
-import modules.tools.upload_media as upload_media
+import bots.upload_media as upload_media
 from discord import Embed, Color
 
 

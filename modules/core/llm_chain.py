@@ -5,7 +5,7 @@ import ollama
 import logging
 from typing import Optional, List, Dict
 import modules.memory as memory
-import modules.tools.speech2text as speech2text
+import modules.core.speech2text as speech2text
 import modules.tools.agent_tools as agent_tools
 import modules.config as config
 import json

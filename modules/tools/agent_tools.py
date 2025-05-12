@@ -1,14 +1,9 @@
-from datetime import datetime
-from youtube_search import YoutubeSearch
+
 import ollama
 import modules.config as config
 import json
+import modules.tools.tool_search as tool_search
 
-
-
-def calendar_tool() -> str:
-    today = datetime.now()
-    return f"Thông tin thời gian hiện tại là {today.strftime('%H:%M %A %d/%m/%Y')}"
 
 def smart_agent(user_message: str):
     """Xử lý câu hỏi, quyết định dùng tool hay LLM trả lời trực tiếp"""
@@ -19,9 +14,10 @@ def smart_agent(user_message: str):
     - calender: Kiểm tra ngày tháng, thời gian, giờ, phút, giây
     - direct_answer: nếu không cần thiết sử dụng công cụ nào, hãy trả lời trực tiếp bằng tiếng Việt.
     - youtube_search: để tìm kiếm video hoặc nghe nhạc
+    - web_search: để tìm kiếm các thông tin từ internet
     Trả lời ngắn gọn không được quyết định lung tung phải có căn cứ để trả lời.
     Định dạng đầu ra:
-    {{"action": "direct_answer" | "calendar" | "youtube_search", "action_input": "câu query được sửa lại để sử dụng cho các công cụ"}}
+    {{"action": "direct_answer" | "calendar" | "youtube_search" | "web_search", "action_input": "câu query được sửa lại để sử dụng cho các công cụ trên"}}
     Câu hỏi: "{user_message['content']}"
     """
 
@@ -34,26 +30,22 @@ def smart_agent(user_message: str):
         # Trả lời trực tiếp bằng LLM
         return [user_message]
     elif "calendar" in decision.response:
-        user_message = [{"role": "assistant", "content": calendar_tool()}, user_message]
+        user_message = [{"role": "assistant", "content": tool_search.calendar_tool()}, user_message]
         return user_message
     elif "youtube_search" in decision.response:
         # Tìm kiếm video trên Youtube
         query = json.loads(decision.response)
-        youtube_results = search_youtube(query['action_input'])
+        youtube_results = tool_search.search_youtube(query['action_input'])
         if not youtube_results:
             return [{"role": "assistant", "content": "Không tìm thấy video phù hợp 😢"}, user_message]
         youtube_results = "\n".join([f"""title: {r['title']} duration: {r['duration']} url: {r['url']}""" for r in youtube_results])
-        user_message = [{"role": "tool", "content": f"Kết quả tìm kiếm: {youtube_results}"}, user_message]
+        user_message = [{"role": "assistant", "content": f"Kết quả tìm kiếm: {youtube_results}"}, user_message]
         return user_message
-
-def search_youtube(query, limit=5):
-    results = YoutubeSearch(query, max_results=limit).to_dict()
-    return [{
-        "title": r['title'],
-        "duration": r['duration'],
-        "url": f"https://youtu.be/{r['id']}",
-        "views": r['views']
-    } for r in results]
+    elif "web_search" in decision.response:
+        query = json.loads(decision.response)
+        web_results = tool_search.search_with_ddgs(query['action_input'])
+        user_message = [{"role": "assistant", "content": f"Kết quả tìm kiếm: {web_results}"}, user_message]
+        return user_message
 
 
 # Ví dụ sử dụng

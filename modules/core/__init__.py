@@ -1,2 +1,2 @@
 from . import llm_chain
-from . import prompt
+from ...TEST import prompt
