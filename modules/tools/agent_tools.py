@@ -1,6 +1,7 @@
 import ollama
 import modules.config as config
 import modules.tools.tool_searchs as tool_searchs
+import modules.tools.tool_others as tool_others
 import json
 
 
@@ -17,7 +18,7 @@ def smart_agent(user_message: str):
     Trả lời ngắn gọn không được quyết định lung tung phải có căn cứ để trả lời.
     Định dạng đầu ra:
 
-    {{"action": "direct_answer" | "calendar" | "youtube_search", "action_input": "câu query được sửa lại để sử dụng cho các công cụ"|""}}
+    {{"action": "direct_answer" | "calendar" | "youtube_search" | "web_search", "action_input": "câu query được sửa lại để sử dụng cho các công cụ"|""}}
     Câu hỏi: "{user_message['content']}"
     """
 
@@ -25,7 +26,8 @@ def smart_agent(user_message: str):
     decision = ollama.generate(model=config.MODEL_NAME_G, prompt=decision_prompt)
     # .strip().lower()
     print(f"Decision: {decision.response}")
-    decision.response = decision.response.replace("<think>", "").replace("</think>", "").strip()
+    # decision.response = decision.response.replace("<think>", "").replace("</think>", "").strip()
+    decision.response = tool_others.remove_think_content(decision.response)
     if "direct_answer" in decision.response:
         # Trả lời trực tiếp bằng LLM
         return [user_message]
