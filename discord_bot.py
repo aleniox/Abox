@@ -1,6 +1,6 @@
-from modules.core import llm_chain
+from modules.core import agent_chat
 
-llm_chain.start_ollama_server()
+agent_chat.start_ollama_server()
 
 print("Gõ 'exit' hoặc 'quit' để thoát.")
 print("Để gửi ảnh: image <đường_dẫn_ảnh> [nội dung_tin_nhắn]")
@@ -23,5 +23,5 @@ while True:
             print("⚠️ Cú pháp sai. Dùng: image <đường_dẫn_ảnh> [tin nhắn]")
             continue
 
-    bot_response = llm_chain.chat(session_id=12, message=text, image_path=image_path)
+    bot_response = agent_chat.chat(session_id=12, message=text, image_path=image_path)
     print(f"\nAssistant: {bot_response}")

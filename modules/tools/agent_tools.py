@@ -1,6 +1,6 @@
-
 import ollama
 import modules.config as config
+import modules.tools.tool_searchs as tool_searchs
 import json
 import modules.tools.tool_search as tool_search
 
@@ -17,7 +17,8 @@ def smart_agent(user_message: str):
     - web_search: để tìm kiếm các thông tin từ internet
     Trả lời ngắn gọn không được quyết định lung tung phải có căn cứ để trả lời.
     Định dạng đầu ra:
-    {{"action": "direct_answer" | "calendar" | "youtube_search" | "web_search", "action_input": "câu query được sửa lại để sử dụng cho các công cụ trên"}}
+
+    {{"action": "direct_answer" | "calendar" | "youtube_search", "action_input": "câu query được sửa lại để sử dụng cho các công cụ"|""}}
     Câu hỏi: "{user_message['content']}"
     """
 
@@ -36,6 +37,8 @@ def smart_agent(user_message: str):
         # Tìm kiếm video trên Youtube
         query = json.loads(decision.response)
         youtube_results = tool_search.search_youtube(query['action_input'])
+
+        youtube_results = tool_searchs.search_youtube(query['action_input'])
         if not youtube_results:
             return [{"role": "assistant", "content": "Không tìm thấy video phù hợp 😢"}, user_message]
         youtube_results = "\n".join([f"""title: {r['title']} duration: {r['duration']} url: {r['url']}""" for r in youtube_results])

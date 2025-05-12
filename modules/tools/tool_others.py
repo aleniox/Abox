@@ -1,6 +1,8 @@
 import re
 
 def format_discord_message(text):
+    text = remove_think_content(text)
+    
     parts = re.split(r'(\$\$.*?\$\$|\(.*?\))', text)
     
     result = []
@@ -24,5 +26,7 @@ def format_discord_message(text):
                 result.append(f"**{dialog}**")
     output = "\n".join(result)
     output = output.replace("$$", " ")
-
     return output.strip()
+
+def remove_think_content(text):
+    return re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)

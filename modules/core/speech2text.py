@@ -49,7 +49,7 @@ def transcribe_audio(audio_path: str, language: str = "vi-VN") -> Optional[str]:
 def transcribe_audio_with_whisperx(audio_path: str, language: str = "vi") -> Optional[str]:
     """Chuyển đổi audio thành văn bản bằng Faster Whisper"""
     import whisperx
-    model = whisperx.load_model("speech2text", "cuda", compute_type="int8")
+    model = whisperx.load_model("weights/speech2text", "cuda", compute_type="int8")
 
     try:
         audio = whisperx.load_audio(audio_path)

@@ -21,7 +21,8 @@ logger = logging.getLogger("llm_chain")
 MODEL_NAME = config.MODEL_NAME_G
 
 try:
-    from modules.templates import prompt_system
+    # from telegram_.templates import prompt_system
+    from modules.prompts import prompt_system
     # from modules.core.prompt import prompt_system
 except ImportError:
     logger.warning("prompt.py not found. Using default system prompt.")
@@ -106,7 +107,9 @@ def chat(session_id, message: str = "", image_path: Optional[List[str]] = None, 
     # messages = vector_history.get_recent_history(0000, limit=50)
     response = ""
     stream = ollama.chat(model=MODEL_NAME, messages=messages,
-                         stream=True, options={"num_ctx": 10000})
+                         stream=True, 
+                        #  options={"num_ctx": 10000}
+                         )
     for chunk in stream:
         content = chunk.get("message", {}).get("content", "")
         if content:
@@ -114,12 +117,14 @@ def chat(session_id, message: str = "", image_path: Optional[List[str]] = None, 
             response += content
     print()
     # Cập nhật lịch sử chat
-    response = response.replace("<think>", "").replace("</think>", "")
+    # response = response.replace("<think>", "").replace("</think>", "")
+    import modules.tools.tool_others as tool_others
+    response = tool_others.remove_think_content(response)
     assistant_message = {"role": "assistant", "content": response.strip()}
     # vector_history.add_message(session_id, assistant_message)
     HISTORY_CHAT.extend([user_message, assistant_message])
-    with open(config.MEMORY_CHAT_PATH, "w", encoding="utf-8") as f:
-        json.dump(HISTORY_CHAT[1:], f, ensure_ascii=False, indent=2)
+    # with open(config.MEMORY_CHAT_PATH, "w", encoding="utf-8") as f:
+    #     json.dump(HISTORY_CHAT[1:], f, ensure_ascii=False, indent=2)
     return response
 
 
