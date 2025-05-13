@@ -1,10 +1,8 @@
 import ollama
 import modules.config as config
 import modules.tools.tool_searchs as tool_searchs
+import modules.tools.tool_others as tool_others
 import json
-
-
-
 
 
 def smart_agent(user_message: str):
@@ -16,9 +14,11 @@ def smart_agent(user_message: str):
     - calender: Kiểm tra ngày tháng, thời gian, giờ, phút, giây
     - direct_answer: nếu không cần thiết sử dụng công cụ nào, hãy trả lời trực tiếp bằng tiếng Việt.
     - youtube_search: để tìm kiếm video hoặc nghe nhạc
+    - web_search: để tìm kiếm các thông tin từ internet
     Trả lời ngắn gọn không được quyết định lung tung phải có căn cứ để trả lời.
     Định dạng đầu ra:
-    {{"action": "direct_answer" | "calendar" | "youtube_search", "action_input": "câu query được sửa lại để sử dụng cho các công cụ"|""}}
+
+    {{"action": "direct_answer" | "calendar" | "youtube_search" | "web_search", "action_input": "câu query được sửa lại để sử dụng cho các công cụ"|""}}
     Câu hỏi: "{user_message['content']}"
     """
 
@@ -26,7 +26,8 @@ def smart_agent(user_message: str):
     decision = ollama.generate(model=config.MODEL_NAME_G, prompt=decision_prompt)
     # .strip().lower()
     print(f"Decision: {decision.response}")
-    decision.response = decision.response.replace("<think>", "").replace("</think>", "").strip()
+    # decision.response = decision.response.replace("<think>", "").replace("</think>", "").strip()
+    decision.response = tool_others.remove_think_content(decision.response)
     if "direct_answer" in decision.response:
         # Trả lời trực tiếp bằng LLM
         return [user_message]
@@ -40,10 +41,13 @@ def smart_agent(user_message: str):
         if not youtube_results:
             return [{"role": "assistant", "content": "Không tìm thấy video phù hợp 😢"}, user_message]
         youtube_results = "\n".join([f"""title: {r['title']} duration: {r['duration']} url: {r['url']}""" for r in youtube_results])
-        user_message = [{"role": "tool", "content": f"Kết quả tìm kiếm: {youtube_results}"}, user_message]
+        user_message = [{"role": "assistant", "content": f"Kết quả tìm kiếm: {youtube_results}"}, user_message]
         return user_message
-
-
+    elif "web_search" in decision.response:
+        query = json.loads(decision.response)
+        web_results = tool_searchs.search_with_ddgs(query['action_input'])
+        user_message = [{"role": "assistant", "content": f"Kết quả tìm kiếm: {web_results}"}, user_message]
+        return user_message
 
 
 # Ví dụ sử dụng
