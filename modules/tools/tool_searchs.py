@@ -25,11 +25,15 @@ def web_crawl_data(url_doc):
     document_to_compare = loader.load()
     return document_to_compare
 
-def search_with_ddgs(query, max_results=12):
+def search_with_ddgs(query, max_results=3):
+    import time
     tool = DDGS()
+    content=""
     search_results = tool.text(query, region="vn-vi", max_results=max_results)
+    print(search_results)
     for list_web in search_results:
         docs = web_crawl_data([list_web["href"]])
+        time.sleep(1)
         for doc in docs:
             content += f"source: {doc.metadata['source']} title: {doc.metadata['title']} content: {doc.page_content}\n\n"
     content = re.sub(r'\s+', ' ', content)  # Thay thế tất cả khoảng trắng (bao gồm \n, \t) bằng một dấu cách đơn

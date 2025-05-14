@@ -78,3 +78,4 @@ def process_voice_message(audio_paths: str, temp_dir: str = "temp_audio") -> Opt
         os.remove(wav_path)
     
     return output_text
+
