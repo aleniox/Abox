@@ -2,7 +2,7 @@ import os
 DOWNLOAD_FOLDER = "downloads"
 DATA_FOLDER = "data/simple_memory"
 ALLOWED_EXTENSIONS = {"txt", "pdf", "png", "jpg", "jpeg", "gif"}
-# MODEL_NAME_T = "gemma3:4b"
+MODEL_NAME_T = "gemma3:4b"
 MODEL_NAME_G = "qwen3:8b"
 # "qwen3:1.7b"
 # "gemma3:12b-it-qat"
@@ -15,4 +15,3 @@ if not os.path.exists(DATA_FOLDER):
     os.makedirs(DATA_FOLDER)
 
 MEMORY_CHAT_PATH = os.path.join(DATA_FOLDER + "/history_chat.json")
-    

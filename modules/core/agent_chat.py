@@ -74,10 +74,10 @@ def chat(session_id, message: str = "", image_path: Optional[List[str]] = None, 
     # Xử lý danh sách ảnh nếu có
     valid_images = []
     if image_path:
-        MODEL_NAME = config.MODEL_NAME_G
+        MODEL_NAME = config.MODEL_NAME_T
         for img in image_path:
             if os.path.isfile(img):
-                valid_images.append(img)
+                valid_images.append(str(img))
                 logger.info(f"🖼️ Đã thêm ảnh: {img}")
             else:
                 logger.warning(f"⚠️ Ảnh không tồn tại: {img}")
@@ -86,6 +86,7 @@ def chat(session_id, message: str = "", image_path: Optional[List[str]] = None, 
     elif audio_path:
         # Xử lý tin nhắn thoại nếu có
         text = speech2text.process_voice_message(audio_path)
+        # text = speech2text.transcribe_api_whisper(audio_path)
         if text:
             user_message["content"] = text
             logger.info(
@@ -97,8 +98,10 @@ def chat(session_id, message: str = "", image_path: Optional[List[str]] = None, 
     # Nếu không có nội dung và cũng không có ảnh hợp lệ
     if not user_message["content"] and "images" not in user_message:
         return "⚠️ Vui lòng cung cấp văn bản hoặc ít nhất một ảnh hợp lệ."
-
-    agent_message = agent_tools.smart_agent(user_message)
+    if not image_path:
+        agent_message = agent_tools.smart_agent(user_message)
+    else:
+        agent_message = [user_message]
     # agent_message = [user_message]
     print(f"🗨️ Tin nhắn sau khi xử lý: {agent_message}")
     # print(HISTORY_CHAT +  agent_message)
