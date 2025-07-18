@@ -98,7 +98,7 @@ def chat(session_id, message: str = "", image_path: Optional[List[str]] = None, 
     if not user_message["content"] and "images" not in user_message:
         return "⚠️ Vui lòng cung cấp văn bản hoặc ít nhất một ảnh hợp lệ."
 
-    agent_message = agent_tools.smart_agent(user_message)
+    agent_message = agent_tools.smart_agent_decision(user_message)
     # agent_message = [user_message]
     print(f"🗨️ Tin nhắn sau khi xử lý: {agent_message}")
     # print(HISTORY_CHAT +  agent_message)

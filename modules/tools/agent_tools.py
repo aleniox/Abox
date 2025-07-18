@@ -49,7 +49,41 @@ def smart_agent(user_message: str):
         user_message = [{"role": "assistant", "content": f"Kết quả tìm kiếm: {web_results}"}, user_message]
         return user_message
 
+def clean_excessive_newlines(text):
+    """
+    Xóa các dòng trống thừa trong văn bản, chỉ giữ lại tối đa 1 dòng trống giữa các đoạn.
+    """
+    import re
+    # Thay thế 2+ dòng trống liên tiếp bằng 1 dòng trống
+    cleaned_text = re.sub(r'\n{3,}', '\n\n', text.strip())
+    return cleaned_text
 
+def smart_agent_decision(user_message: str):
+    import modules.tools.tools_call as tool_call
+    system_prompt = "Căn cứ vào ngữ cảnh cũng như là yêu cầu của người dùng để chọn tools phù hợp"
+    message = [{'role': 'system', 'content': system_prompt},
+               {'role': 'user', 'content': user_message['content']}]
+    tools = ollama.chat(model=config.MODEL_NAME_G, messages=message, tools=[tool_call.calculus_tool, tool_call.search_web_tool, tool_call.url_search_tool])
+    if tools.message.tool_calls:
+        print(tools.message.tool_calls)
+        for tool in tools.message.tool_calls:
+            if tool.function.name == 'calculus_calculator':
+                context_ = tool_call.calculus_calculator(expression=tool.function.arguments['expression'],
+                                                        operation=tool.function.arguments['operation'],
+                                                        evaluate=tool.function.arguments['evaluate'])
+            elif tool.function.name == 'search_web':
+                contexts = tool_call.web_search(query=tool.function.arguments['query'])
+                # print(contexts, type(contexts))
+                # context_ = [f"Title: {context['title']}, Description: {context['url']}, Url: {context['url']}" for context in contexts]
+                context_ = contexts[1]
+            elif tool.function.name == 'url_search':
+                contexts = tool_call.web_crawl_data(url_doc=tool.function.arguments['url'])
+                context_ = '\n'.join([f"Source: {doc.metadata.get('source')}, Title: {doc.metadata.get('title')}, Language: {doc.metadata.get('language', 'None')}, Page_content: {clean_excessive_newlines(doc.page_content)}" for doc in contexts])
+        user_message = [{"role": "assistant", "content": f"Kết quả sau khi dùng tools: {context_}"}, user_message]
+        
+        return user_message
+        
+    return user_message
 # Ví dụ sử dụng
 # if __name__ == "__main__":
 #     user_message = {"role": "user", "content": "Tôi muốn nghe bài hát The Night"}
