@@ -3,6 +3,8 @@ from pathlib import Path
 import speech_recognition as sr
 from pydub import AudioSegment
 import logging
+import requests
+import modules.config as config
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -61,7 +63,7 @@ def transcribe_audio_with_whisperx(audio_path: str, language: str = "vi") -> Opt
     
     return None
 
-def process_voice_message(audio_paths: str, temp_dir: str = "temp_audio") -> Optional[str]:
+def process_voice_message(audio_paths: list, temp_dir: str = "temp_audio") -> Optional[str]:
     """Xử lý tin nhắn thoại: chuyển đổi -> nhận dạng"""
     # Bước 1: Chuyển đổi sang WAV
     output_text = ""
@@ -78,3 +80,11 @@ def process_voice_message(audio_paths: str, temp_dir: str = "temp_audio") -> Opt
         os.remove(wav_path)
     
     return output_text
+
+def transcribe_api_whisper(audio_paths: str):
+    text = ""
+    for audio_path in audio_paths:
+        with open(audio_path, "rb") as f:
+            response = requests.post(config.URL, files={'file': f})
+        text += response.json()["transcription"]
+    return text.strip() if text else None
