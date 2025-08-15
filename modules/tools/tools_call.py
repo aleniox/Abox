@@ -200,3 +200,21 @@ def calculus_calculator(
     
     except Exception as e:
         return f"Lỗi: {str(e)}"
+    
+generate_image_tools = {
+    "type": "function",
+    "function": {
+        "name": "generate_image",
+        "description": "Tạo một hình ảnh dựa trên mô tả văn bản của người dùng.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "prompt": {
+                    "type": "string",
+                    "description": "Mô tả chi tiết bằng văn bản về hình ảnh cần tạo."
+                }
+            },
+            "required": ["prompt"]
+        }
+    }
+}

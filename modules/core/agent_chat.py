@@ -102,6 +102,10 @@ def chat(session_id, message: str = "", image_path: Optional[List[str]] = None, 
     agent_message = agent_tools.smart_agent_decision(user_message)
     # agent_message = [user_message]
     print(f"🗨️ Tin nhắn sau khi xử lý: {agent_message}")
+    
+    if isinstance(agent_message, str):
+        return {"images": agent_message} 
+    
     # print(HISTORY_CHAT +  agent_message)
     messages = memory.trim_history(HISTORY_CHAT + agent_message)
     # print(messages)

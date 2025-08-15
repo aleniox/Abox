@@ -1,4 +1,4 @@
-import bots.discordbot as discordbot
+import bots.my_bot as my_bot
 import asyncio
 import logging
 import modules.core.agent_chat as agent_chat
@@ -19,13 +19,13 @@ def main():
     asyncio.set_event_loop(loop)
     
     try:
-        loop.run_until_complete(discordbot.run_bot())
+        loop.run_until_complete(my_bot.run_bot())
     except KeyboardInterrupt:
         logger.info("Received keyboard interrupt. Shutting down...")
     except Exception as e:
         logger.error(f"Fatal error: {e}")
     finally:
-        loop.run_until_complete(discordbot.bot.close())
+        loop.run_until_complete(my_bot.bot.close())
         loop.close()
         logger.info("Bot has shut down.")
 
