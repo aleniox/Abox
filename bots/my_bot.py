@@ -1,21 +1,20 @@
 import discord
 from discord.ext import commands
-from discord.ui import Button, View
+# from discord.ui import Button, View
 
 import os
-import csv
 import logging
 import asyncio
+import csv
 from pathlib import Path
 
 from dotenv import load_dotenv
 import modules.tools.tool_others as tool_others
-
 # import modules.tools.agent_tools as agent_tools
-# import modules.agent_chat as agent_chat
 import modules.core.agent_chat as agent_chat
-import modules.config as config
+import modules.tools.tool_searchs as tool_searchs
 import modules.tools.tool_login as tool_login
+import modules.config as config
 import bots.upload_media as upload_media
 from discord import Embed, Color
 
@@ -44,46 +43,13 @@ connection_retries = 0
 MAX_RETRIES = 5
 RETRY_DELAY = 5  # seconds
 
-MAX_DISCORD_MSG_LENGTH = 2000
-
-
-
-# @bot.command(name="login")
-# async def nhap_thong_tin(ctx):
-#     def check(m):
-#         return m.author == ctx.author and m.channel == ctx.channel
-
-#     try:
-#         await ctx.send("👤 Hãy nhập **số điện thoại hoặc email**:")
-#         msg1 = await bot.wait_for("message", check=check, timeout=30)
-#         username = msg1.content
-
-#         await ctx.send("📝 Bây giờ hãy nhập **password** của bạn:")
-#         msg2 = await bot.wait_for("message", check=check, timeout=60)
-#         password = msg2.content
-
-#         embed = discord.Embed(
-#             title="✅ Đã nhận thông tin",
-#             color=discord.Color.purple()
-#         )
-#         embed.add_field(name="👤 Số điện thoại hoặc email", value=username, inline=False)
-#         embed.add_field(name="📝 Password", value=password, inline=False)
-#         embed.set_footer(text=f"{bot.user.name} Bot © 2025")
-
-#         await ctx.send(embed=embed)
-#         with open("downloads/cache/login_info.csv", "a", encoding="utf-8", newline="") as f:
-#             writer = csv.writer(f)
-#             writer.writerow([ctx.author.name, username, password])
-#     except asyncio.TimeoutError:
-#         await ctx.send("⏰ Bạn không phản hồi kịp thời gian. Vui lòng thử lại lệnh `!form`.")
-
 class InfoForm(discord.ui.Modal, title="Nhập Thông Tin"):
 
-    url = discord.ui.TextInput(label="Nhập url", placeholder="Nhập url...")
-    username = discord.ui.TextInput(label="Nhập email", placeholder="Nhập email...", style=discord.TextStyle.short)
-    password = discord.ui.TextInput(label="Nhập password", placeholder="Nhập password...", style=discord.TextStyle.short)
+    url = discord.ui.TextInput(label="Nhập link chấm công", placeholder="Nhập url...")
+    username = discord.ui.TextInput(label="Username", placeholder="Nhập số điện thoại hoặc email...", style=discord.TextStyle.short)
+    password = discord.ui.TextInput(label="Password", placeholder="Nhập mật khẩu...", style=discord.TextStyle.short)
     
-    # password = discord.ui.TextInput(label="Nhập password", style=discord.TextStyle.paragraph, required=False)
+    # bio = discord.ui.TextInput(label="Giới thiệu bản thân", style=discord.TextStyle.paragraph, required=False)
 
     async def on_submit(self, interaction: discord.Interaction):
         # Phản hồi khi người dùng submit form
@@ -91,9 +57,9 @@ class InfoForm(discord.ui.Modal, title="Nhập Thông Tin"):
             writer = csv.writer(f)
             writer.writerow([self.url, self.username, self.password])
         await interaction.response.send_message(
-            f"✅ Cảm ơn bạn, **{self.url}**!\n"
-            f"Tuổi: {self.username}\n"
-            f"Giới thiệu: {self.password}", ephemeral=True
+            f"✅ Link chấm công, **{self.url}**!\n"
+            f"Email: {self.username}\n"
+            f"Password: {self.password}", ephemeral=True
         )
 
 @bot.command()
@@ -108,23 +74,19 @@ class FormView(discord.ui.View):
     @discord.ui.button(label="Điền Form", style=discord.ButtonStyle.primary)
     async def open_modal(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(InfoForm())
-
-@bot.command(name="checkin")
-async def checkin_and_out(ctx, btn):
+        
+@bot.command(name="ckin")
+async def checkin_and_out(ctx, type: str = 'ls'):
     with open("downloads/cache/login_info.csv", "r", encoding="utf-8") as f:
         reader = csv.reader(f)
         rows = list(reader)
-    print(rows)
+    # print(rows)
+    print(type)
     for row in rows:
-        image_path = tool_login.login_and_click(username=row[1], password=row[2])
+        image_path = tool_login.login_and_click(username=row[1], password=row[2], url=row[0])
         await ctx.channel.send(file=discord.File(image_path))
     await ctx.channel.send("Đã chấm công xong thưa ngài")
-    
-async def send_long_message(channel, text):
-    for i in range(0, len(text), MAX_DISCORD_MSG_LENGTH):
-        part = text[i:i + MAX_DISCORD_MSG_LENGTH]
-        await channel.send(part)
-
+# ============================================================
 @bot.command(name="info")
 async def send_info(ctx):
     """Gửi tin nhắn embed đẹp mắt"""
@@ -140,6 +102,67 @@ async def send_info(ctx):
     embed.set_footer(text=f"{bot.user.name} Bot © 2025")
     
     await ctx.send(embed=embed)
+
+
+@bot.command(name="youtube")
+async def hana(ctx, *, query):
+    """Tìm kiếm video YouTube với giao diện nhúng (embed)"""
+    try:
+        # Hiển thị thông báo đang tìm kiếm (cách mới)
+        async with ctx.typing():
+            # Lấy kết quả từ YouTube
+            videos = tool_searchs.search_youtube(query)
+            
+            if not videos:
+                embed = discord.Embed(
+                    title="❌ Không tìm thấy kết quả",
+                    description=f"Không có video nào phù hợp với từ khóa `{query}`",
+                    color=discord.Color.red()
+                )
+                return await ctx.send(embed=embed)
+            
+            # Tạo Embed chính
+            embed = discord.Embed(
+                title=f"🔍 Kết quả tìm kiếm: '{query}'",
+                description="",
+                color=discord.Color.fuchsia()
+            )
+            
+            # Sử dụng avatar mặc định nếu người dùng không có
+            avatar_url = ctx.author.avatar.url if ctx.author.avatar else ctx.author.default_avatar.url
+            
+            # embed.set_thumbnail(url="https://image.cdn2.seaart.me/2025-05-04/d0bf765e878c738jp670/d3e8a8d77a85c89141f08043869e5c08_high.webp")  # Ảnh thumbnail
+            embed.set_footer(text=f"Yêu cầu bởi {ctx.author.display_name}", icon_url=avatar_url)
+            
+            # Tạo View với các nút bấm
+            view = discord.ui.View()
+            
+            # Thêm thông tin video vào Embed và tạo nút
+            for idx, video in enumerate(videos[:5]):
+                embed.description += (
+                    f"**{idx+1}. [{video['title'][:50]}...]({video['url']})**\n"
+                    f"👀 {video.get('views', 'N/A')} | ⏱️ {video.get('duration', 'N/A')}\n\n"
+                )
+                
+                button = discord.ui.Button(
+                    label=f"Video {idx+1}",
+                    style=discord.ButtonStyle.link,
+                    url=video['url'],
+                    emoji="▶️",
+                    row=0
+                )
+                view.add_item(button)
+            
+            await ctx.send(embed=embed, view=view)
+            
+    except Exception as e:
+        error_embed = discord.Embed(
+            title="⚠️ Lỗi khi tìm kiếm",
+            description=f"Đã xảy ra lỗi: {str(e)}",
+            color=discord.Color.red()
+        )
+        await ctx.send(embed=error_embed)
+        print(f"[LỖI] Trong lệnh hana: {type(e).__name__}: {e}")
 
 @bot.event
 async def on_ready():
@@ -239,21 +262,34 @@ async def on_message(message):
                 # Call LLM with text and/or image paths
                 response = await loop.run_in_executor(
                     None,
-                    agent_chat.chat_,
+                    agent_chat.chat,
                     session_id,
                     message.content or "",
                     image_paths,
                     audio_paths
                 )
-                print(f"Response: {response}")
-                if "images" in response:
-                    for image_path in response["images"]:
-                        await message.channel.send(file=discord.File(image_path))
-                        return
             except Exception as e:
                 logger.error(f"Error processing message: {e}")
-            
-            # response = tool_others.format_discord_message(response)
-            response = tool_others.remove_think_content(response)
-            # await message.channel.send(response)
-            await send_long_message(message.channel, response)
+                if "Failed to connect to Ollama" in str(e):
+                    try:
+                        agent_chat.start_ollama_server()
+                        # Retry after restarting Ollama
+                        response = await loop.run_in_executor(
+                            None,
+                            agent_chat.chat,
+                            session_id,
+                            message.content or "",
+                            image_paths,
+                            audio_paths
+                        )
+                    except Exception as retry_error:
+                        logger.error(f"Retry failed: {retry_error}")
+                        response = "⚠️ Có lỗi nghiêm trọng xảy ra khi xử lý yêu cầu."
+                else:
+                    response = "⚠️ Có lỗi xảy ra khi xử lý yêu cầu."
+                    
+            if isinstance(response, dict):
+                await message.channel.send(file=discord.File(response.get('images', None)))
+                return
+            response = tool_others.format_discord_message(response)
+            await message.channel.send(response)
