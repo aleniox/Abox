@@ -9,7 +9,7 @@ import os
 
 dotenv.load_dotenv()
 
-def call_api_gennerate_image(args, output_image='data/cache/gemini-native-image.png'):
+def call_api_gennerate_image(args, output_image='downloads/cache/gemini-native-image.png'):
 
     contents = args.get("prompt", None)
     client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
@@ -34,3 +34,5 @@ def call_api_gennerate_image(args, output_image='data/cache/gemini-native-image.
             # image.show()
     return output_image
 # call_api_gennerate_image({'user_query': "tạo cho tôi một con dán đứng như con người nhìn bản thân mình trong chiếc gương"})
+
+# def function_generate_voice(args, output_voice=)

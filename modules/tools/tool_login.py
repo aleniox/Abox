@@ -9,7 +9,12 @@ from selenium.webdriver.support import expected_conditions as EC
 
 # Cấu hình Chrome giả lập Mobile
 
-def login_and_click(host = "http://192.168.1.2:3012/login", username = "0867660302", password="aipt2024", output="downloads/temp/screenshot.png"):
+convert_command = {
+    "cc": "Chấm công",
+    "ls": "Lịch sử"
+}
+
+def login_and_click(host = "http://192.168.1.2:3012/login", username = "0867660302", password="aipt2024", output="downloads/cache/screenshot.png", style="ls"):
     mobile_emulation = {
     "deviceName": "Pixel 2"
     }
@@ -47,8 +52,9 @@ def login_and_click(host = "http://192.168.1.2:3012/login", username = "08676603
         # html_source = driver.page_source
         # print(driver.current_url)
         # print(html_source)
+        print(convert_command[style])
         button_chamcong = wait.until(
-        EC.element_to_be_clickable((By.XPATH, "//button[span[text()='Lịch sử']]")))
+        EC.element_to_be_clickable((By.XPATH, f"//button[span[text()='{convert_command[style]}']]")))
         button_chamcong.click()
         # wait.until(EC.url_changes(driver.current_url))
         print(driver.current_url)

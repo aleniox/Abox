@@ -9,6 +9,7 @@ import time, os
 from pyannote.audio import Model
 from pyannote.audio.pipelines import VoiceActivityDetection
 from pydub import AudioSegment
+import modules.core.speech2text as speech2text
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -37,6 +38,7 @@ HYPER_PARAMETERS = {
 }
 pipeline.instantiate(HYPER_PARAMETERS)
 
+asr = speech2text.model_init_speech2text(adapter_model="TEST/checkpoint-116160")
 
 def butter_bandpass(lowcut=250.0, highcut=3400.0, fs=16000, order=4):
     nyq = 0.5 * fs  # Nyquist freq
@@ -102,33 +104,6 @@ def merge_segments_except_last(segments, fs, audio_chunk):
     final_merged = np.concatenate(merged_audio).astype(np.int16)
     return final_merged
 
-# def sender_loop():
-#     count = 1
-#     audio_concat = AudioSegment.empty()
-    
-#     chunk_30s = []
-#     while not stop_flag:
-#         if not audio_queue.empty():
-#             chunk = audio_queue.get()
-#             chunk = clean_audio(chunk)
-#             temp_audio = "temp_chunk.wav"
-            
-#             with open(temp_audio, "wb") as f:
-#                 wav.write(f, fs, chunk)
-#             temp_audio, audio_concat = split_and_concat(temp_audio, audio_concat)
-
-#             files = {'file': open(temp_audio, "rb")}
-#             try:
-#                 response = requests.post(url, files=files)
-#                 if response.ok:
-#                     print("📝 Transcribed:", response.json()["transcription"])
-#                 else:
-#                     print(f"⚠️ API Error: {response.status_code}")
-#             except Exception as e:
-#                 print(f"❌ Gửi lỗi: {e}")
-#             count+=1
-#         else:
-#             time.sleep(0.1)
 import os
 def numpy_to_audio_segment(np_array, sample_rate, sample_width_bytes=2, channels=1):
     """Chuyển đổi numpy array (raw audio) sang pydub.AudioSegment."""
@@ -172,15 +147,17 @@ def sender_loop():
         # Gửi đoạn 5s đến API
         path_5s = "processed_5s.wav"
         segment_to_send.export(path_5s, format="wav")
-        try:
-            with open(path_5s, "rb") as f:
-                response = requests.post(url, files={'file': f})
-                if response.ok:
-                    print(f"📝 5s Transcribed ({count + 1}):", response.json()["transcription"])
-                else:
-                    print(f"⚠️ Lỗi API 5s: {response.status_code}")
-        except Exception as e:
-            print(f"❌ Gửi lỗi 5s: {e}")
+        response = speech2text.infer_s2t(path_5s, asr)
+        print(f"📝 5s Transcribed ({count + 1}):", response)
+        # try:
+        #     with open(path_5s, "rb") as f:
+        #         response = requests.post(url, files={'file': f})
+        #         if response.ok:
+        #             print(f"📝 5s Transcribed ({count + 1}):", response.json()["transcription"])
+        #         else:
+        #             print(f"⚠️ Lỗi API 5s: {response.status_code}")
+        # except Exception as e:
+        #     print(f"❌ Gửi lỗi 5s: {e}")
 
         # Tích lũy vào buffer 30s
         buffer_30s += audio_seg_5s
@@ -206,16 +183,18 @@ def sender_loop():
 
             path_30s = "processed_30s.wav"
             segment_30s.export(path_30s, format="wav")
-            try:
-                with open(path_30s, "rb") as f:
-                    response = requests.post(url, files={'file': f})
-                    if response.ok:
-                        print("📝 30s Re-Transcribed:", response.json()["transcription"])
-                    else:
-                        print(f"⚠️ Lỗi API 30s: {response.status_code}")
-            except Exception as e:
-                print(f"❌ Gửi lỗi 30s: {e}")
-
+            # try:
+            #     with open(path_30s, "rb") as f:
+            #         response = requests.post(url, files={'file': f})
+            #         if response.ok:
+            #             print("📝 30s Re-Transcribed:", response.json()["transcription"])
+            #         else:
+            #             print(f"⚠️ Lỗi API 30s: {response.status_code}")
+            # except Exception as e:
+            #     print(f"❌ Gửi lỗi 30s: {e}")
+            response = speech2text.infer_s2t(temp_30s, asr)
+            print("📝 30s Re-Transcribed:", response)
+            
             # Reset cho chu kỳ tiếp theo
             buffer_30s = AudioSegment.empty()
             # buffer_30s += segment_last

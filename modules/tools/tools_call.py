@@ -218,3 +218,21 @@ generate_image_tools = {
         }
     }
 }
+
+generate_voice_tools = {
+    "type": "function",
+    "function": {
+        "name": "generate_voice",
+        "description": "Tạo một đoạn giọng nói (âm thanh) dựa trên văn bản đầu vào của người dùng.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "text": {
+                    "type": "string",
+                    "description": "Văn bản sẽ được chuyển thành giọng nói."
+                }
+            },
+            "required": ["text"]
+        }
+    }
+}

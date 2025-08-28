@@ -19,7 +19,7 @@ def smart_agent_decision(user_message: str):
     system_prompt = "Căn cứ vào ngữ cảnh cũng như là yêu cầu của người dùng để chọn tools phù hợp"
     message = [{'role': 'system', 'content': system_prompt},
                {'role': 'user', 'content': user_message['content']}]
-    tools = ollama.chat(model=config.MODEL_NAME_G, messages=message, tools=[tool_call.calculus_tool, tool_call.search_web_tool, tool_call.url_search_tool])
+    tools = ollama.chat(model=config.MODEL_NAME_G, messages=message, tools=[tool_call.calculus_tool, tool_call.search_web_tool, tool_call.url_search_tool, tool_call.generate_image_tools])
     if tools.message.tool_calls:
         print(tools.message.tool_calls)
         for tool in tools.message.tool_calls:

@@ -41,30 +41,30 @@ HISTORY_CHAT = HISTORY_CHAT + LOAD_HISTORY
 # print(HISTORY_CHAT)
 
 
-def start_ollama_server() -> None:
-    # """Khởi động Ollama và pull model."""
-    try:
-        logger.info("Starting Ollama server...")
-        subprocess.Popen(["ollama", "serve"],
-                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        time.sleep(1)
+# def start_ollama_server() -> None:
+#     # """Khởi động Ollama và pull model."""
+#     try:
+#         logger.info("Starting Ollama server...")
+#         subprocess.Popen(["ollama", "serve"],
+#                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+#         time.sleep(1)
 
-        # logger.info(f"Pulling model: {MODEL_NAME}")
-        # subprocess.run(["ollama", "pull", MODEL_NAME], check=True, capture_output=True, text=True)
-        logger.info(f"Model '{MODEL_NAME}' is ready.")
-    except FileNotFoundError:
-        logger.error(
-            "❌ Ollama không được tìm thấy. Cài đặt tại: https://ollama.com/download")
-        raise
-    except subprocess.CalledProcessError as e:
-        logger.error(f"❌ Không thể pull model {MODEL_NAME}: {e.stderr}")
-        raise
-    except Exception as e:
-        logger.error(f"❌ Lỗi khởi động Ollama: {e}")
-        raise
+#         # logger.info(f"Pulling model: {MODEL_NAME}")
+#         # subprocess.run(["ollama", "pull", MODEL_NAME], check=True, capture_output=True, text=True)
+#         logger.info(f"Model '{MODEL_NAME}' is ready.")
+#     except FileNotFoundError:
+#         logger.error(
+#             "❌ Ollama không được tìm thấy. Cài đặt tại: https://ollama.com/download")
+#         raise
+#     except subprocess.CalledProcessError as e:
+#         logger.error(f"❌ Không thể pull model {MODEL_NAME}: {e.stderr}")
+#         raise
+#     except Exception as e:
+#         logger.error(f"❌ Lỗi khởi động Ollama: {e}")
+#         raise
 
 
-def chat(session_id, message: str = "", image_path: Optional[List[str]] = None, audio_path: str = None) -> str:
+def chat(message: str = "", image_path: Optional[List[str]] = None, audio_path: str = None) -> str:
     global HISTORY_CHAT, MODEL_NAME
     logger.info("🧠 Đang xử lý yêu cầu chat...")
 
@@ -135,7 +135,7 @@ def chat(session_id, message: str = "", image_path: Optional[List[str]] = None, 
 
 # --- CLI ---
 if __name__ == "__main__":
-    start_ollama_server()
+    # start_ollama_server()
     logger.info(f"🤖 Chat bắt đầu với model: {MODEL_NAME}")
     print("Gõ 'exit' hoặc 'quit' để thoát.")
     print("Để gửi ảnh: image <đường_dẫn_ảnh> [nội dung_tin_nhắn]")

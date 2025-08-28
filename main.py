@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 def main():
     """Start the bot with reconnection handling."""
-    agent_chat.start_ollama_server()
+    # agent_chat.start_ollama_server()
     logger.info("Starting Discord bot with reconnection handling...")
     
     loop = asyncio.new_event_loop()
