@@ -105,7 +105,7 @@ async def send_info(ctx):
 
 
 @bot.command(name="youtube")
-async def hana(ctx, *, query):
+async def youtube(ctx, *, query):
     """Tìm kiếm video YouTube với giao diện nhúng (embed)"""
     try:
         # Hiển thị thông báo đang tìm kiếm (cách mới)
