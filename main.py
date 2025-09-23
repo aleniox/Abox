@@ -1,7 +1,7 @@
 import bots.my_bot as my_bot
 import asyncio
 import logging
-import modules.core.agent_chat as agent_chat
+# import modules.core.agent_chat as agent_chat
 
 
 logging.basicConfig(

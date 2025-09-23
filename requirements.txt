@@ -1,0 +1,19 @@
+discord.py
+ollama
+python-dotenv
+youtube_search
+chromadb
+sentence_transformers
+SpeechRecognition
+whisperx==3.3.2
+duckduckgo_search
+google-genai
+python-dotenv
+pillow
+selenium
+webdriver-manager
+langchain_community
+pydub
+SpeechRecognition
+# .\llamacpp\llama-mtmd-cli.exe -m {text_model}.gguf --mmproj mmproj.gguf --image your_image.jpg
+

@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  ollama-gpu-zero:
+    image: ollama/ollama
+    container_name: ollama-gpu-zero
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - D:\ollama:/root/.ollama
+    environment:
+      - OLLAMA_MAX_LOADED_MODELS=2
+      - OLLAMA_NUM_PARALLEL=4
+      - OLLAMA_MAX_QUEUE=512
+      - NVIDIA_VISIBLE_DEVICES=all # Sử dụng tất cả các GPU
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+    runtime: nvidia
+
+
+  chatbot-persional-one:
+    image: chatbot-persional-one
+    build: .
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+    volumes:
+      - C:\Users\ADMIN\Downloads\blackbox:/app  # Chỉ dùng khi dev, nếu production nên bỏ
+    environment:
+      - PYTHONUNBUFFERED=1
+      - OLLAMA_API_URLCORE=http://ollama-gpu-zero:11434/api/chat
+      # - OLLAMA_API_URLCHAT=http://ollama-gpu-two:11434/api/chat
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - ollama-gpu-zero
+      # - ollama-gpu-three
+
+volumes:
+  ollama-data-gpu-zero:
+  # ollama-data-gpu1:

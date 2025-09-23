@@ -18,7 +18,6 @@ import modules.config as config
 import bots.upload_media as upload_media
 from discord import Embed, Color
 
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,

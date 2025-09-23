@@ -2,7 +2,6 @@
 FROM nvidia/cuda:13.0.1-cudnn-runtime-ubuntu24.04
 
 # Thiết lập biến môi trường để đảm bảo Python ghi log ra ngay lập tức
-ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update && apt-get install -y \
     python3 \
@@ -31,5 +30,4 @@ RUN pip install -r requirements.txt
 COPY . /app/
 
 EXPOSE 5000
-
 CMD ["python3", "main.py"]
