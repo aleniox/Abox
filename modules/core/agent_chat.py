@@ -8,6 +8,7 @@ import modules.memory as memory
 import modules.core.speech2text as speech2text
 import modules.tools.agent_tools as agent_tools
 import modules.config as config
+import modules.core.call_api_llm as call_api_llm
 import json
 
 
@@ -111,7 +112,7 @@ def chat(message: str = "", image_path: Optional[List[str]] = None, audio_path: 
     # print(messages)
     # messages = vector_history.get_recent_history(0000, limit=50)
     response = ""
-    stream = ollama.chat(model=MODEL_NAME, messages=messages,
+    stream = call_api_llm.call_chat_api(model=MODEL_NAME, messages=messages,
                          stream=True, 
                         #  options={"num_ctx": 10000}
                          )
