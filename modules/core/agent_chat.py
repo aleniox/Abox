@@ -64,6 +64,20 @@ HISTORY_CHAT = HISTORY_CHAT + LOAD_HISTORY
 #         logger.error(f"❌ Lỗi khởi động Ollama: {e}")
 #         raise
 
+def process_and_accumulate_stream(response_stream):
+    full_response = ""
+    for line in response_stream.iter_lines():
+        try:
+            # print(line[5:])
+            if line:
+                data = json.loads(line[5:].decode("utf-8"))
+                content = data.get("choices", [{}])[0].get("delta", {}).get("content", "")
+                # print(content, end="")
+                full_response += content
+                yield full_response
+        except Exception as e:
+            # print(line)
+            continue
 
 def chat(message: str = "", image_path: Optional[List[str]] = None, audio_path: str = None) -> str:
     global HISTORY_CHAT, MODEL_NAME
@@ -116,11 +130,13 @@ def chat(message: str = "", image_path: Optional[List[str]] = None, audio_path: 
                          stream=True, 
                         #  options={"num_ctx": 10000}
                          )
-    for chunk in stream:
-        content = chunk.get("message", {}).get("content", "")
-        if content:
-            print(content, end="", flush=True)
-            response += content
+    for chunk in process_and_accumulate_stream(stream):
+        # print(chunk)
+        response = chunk
+        # content = chunk.get("message", {}).get("content", "")
+        # if content:
+        #     print(content, end="", flush=True)
+            # response += content
     print()
     # Cập nhật lịch sử chat
     # response = response.replace("<think>", "").replace("</think>", "")

@@ -6,11 +6,14 @@ from io import BytesIO
 import base64
 import dotenv
 import os
+import json
 
 dotenv.load_dotenv()
 
 def call_api_gennerate_image(args, output_image='downloads/cache/gemini-native-image.png'):
 
+    if isinstance(args, str):
+        args = json.loads(args)
     contents = args.get("prompt", None)
     client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
 

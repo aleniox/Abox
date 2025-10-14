@@ -10,13 +10,15 @@ RUN apt-get update && apt-get install -y \
     tesseract-ocr-vie \
     && rm -rf /var/lib/apt/lists/*
 # Thiết lập thư mục làm việc trong container
+
 WORKDIR /app
 
 # RUN pip install uv
 # Copy file requirements.txt vào container
 COPY requirements.txt /app/
 RUN apt-get update && apt-get install -y python3-venv
-
+# RUN wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
+#     && apt install -y ./google-chrome-stable_current_amd64.deb
 # Tạo venv
 RUN python3 -m venv /opt/venv
 

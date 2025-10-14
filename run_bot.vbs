@@ -1,0 +1,1 @@
+CreateObject("Wscript.Shell").Run "D:/Program/miniconda/envs/bot-is-ai/python.exe c:/Users/ADMIN/Downloads/blackbox/TEST/fillter/main.py", 0, True

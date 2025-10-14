@@ -269,6 +269,8 @@ async def on_message(message):
                 )
             except Exception as e:
                 logger.error(f"Error processing message: {e}")
+                import traceback
+                traceback.print_exc()
                 if "Failed to connect to Ollama" in str(e):
                     try:
                         # agent_chat.start_ollama_server()

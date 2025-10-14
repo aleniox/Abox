@@ -21,9 +21,9 @@ def smart_agent_decision(user_message: str):
     message = [{'role': 'system', 'content': system_prompt},
                {'role': 'user', 'content': user_message['content']}]
     tools = call_api_llm.call_chat_api(model=config.MODEL_NAME_G, messages=message, tools=[tool_call.calculus_tool, tool_call.search_web_tool, tool_call.url_search_tool, tool_call.generate_image_tools])
-    tools_call = tools.json()['choices'][0]
-    print(tools_call)
-    if tools['message']['tool_calls']:
+    tools = tools.json()['choices'][0]
+    print(tools)
+    if 'tool_calls' in tools['message']:
         print(tools['message']['tool_calls'])
         for tool in tools['message']['tool_calls']:
             if tool['function']['name'] == 'calculus_calculator':

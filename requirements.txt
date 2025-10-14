@@ -1,6 +1,5 @@
 discord.py
 ollama
-python-dotenv
 youtube_search
 chromadb
 sentence_transformers
@@ -14,6 +13,8 @@ selenium
 webdriver-manager
 langchain_community
 pydub
-SpeechRecognition
+peft
+langchain_ollama
+
 # .\llamacpp\llama-mtmd-cli.exe -m {text_model}.gguf --mmproj mmproj.gguf --image your_image.jpg
 
