@@ -1,9 +1,0 @@
-discord.py
-ollama
-python-dotenv
-youtube_search
-chromadb
-sentence_transformers
-SpeechRecognition
-whisperx==3.3.2
-# .\llamacpp\llama-mtmd-cli.exe -m {text_model}.gguf --mmproj mmproj.gguf --image your_image.jpg
