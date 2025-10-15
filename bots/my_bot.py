@@ -76,14 +76,15 @@ class FormView(discord.ui.View):
         
 @bot.command(name="ckin")
 async def checkin_and_out(ctx, style: str = 'ls'):
-    with open("downloads/cache/login_info.csv", "r", encoding="utf-8") as f:
-        reader = csv.reader(f)
-        rows = list(reader)
-    # print(rows)
-    print(style)
-    for row in rows:
-        image_path = tool_login.login_and_click(host= row[0], username=row[1], password=row[2], style=style)
-        await ctx.channel.send(file=discord.File(image_path))
+    async with ctx.channel.typing():
+        with open("downloads/cache/login_info.csv", "r", encoding="utf-8") as f:
+            reader = csv.reader(f)
+            rows = list(reader)
+        # print(rows)
+        print(style)
+        for row in rows:
+            image_path = tool_login.login_and_click(host= row[0], username=row[1], password=row[2], style=style)
+            await ctx.channel.send(file=discord.File(image_path))
     await ctx.channel.send("Đã chấm công xong thưa ngài")
 # ============================================================
 @bot.command(name="info")

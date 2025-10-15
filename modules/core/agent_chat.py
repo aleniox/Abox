@@ -1,7 +1,6 @@
 import subprocess
 import time
 import os
-import ollama
 import logging
 from typing import Optional, List, Dict
 import modules.memory as memory

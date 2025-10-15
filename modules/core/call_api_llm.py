@@ -3,7 +3,7 @@ import logging
 # from openai import OpenAI
 import modules.config as config
 from transformers import AutoTokenizer
-from langchain_ollama import OllamaEmbeddings
+# from langchain_ollama import OllamaEmbeddings
 
 
 logging.basicConfig(
@@ -25,7 +25,7 @@ def call_chat_api(messages,
         "stream": stream,
         "options": {
             "num_ctx": max_token,
-            "temperature": 0.7,
+            "temperature": 0.6,
             "top_p": 0.8,
             "top_k": 20,
             "min_p": 0.0,
@@ -41,12 +41,12 @@ def get_tokenizer():
     return AutoTokenizer.from_pretrained(config.TOKENIZE)
 
 
-def get_embeddings():
-    """Create and return embedding model with consistent settings"""
-    return OllamaEmbeddings(
-        model=config.MODEL_NAME_EMBED,
-        base_url=config.OLLAMA_API_EMBEDD.replace("/api/chat", "")
-    )
+# def get_embeddings():
+#     """Create and return embedding model with consistent settings"""
+#     return OllamaEmbeddings(
+#         model=config.MODEL_NAME_EMBED,
+#         base_url=config.OLLAMA_API_EMBEDD.replace("/api/chat", "")
+#     )
 
 
 def compute_tokenize(context):
