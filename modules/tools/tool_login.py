@@ -1,5 +1,6 @@
 from selenium import webdriver
 import time
+import tempfile
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
@@ -31,7 +32,14 @@ def login_and_click(
     options.add_argument("--headless=new")  # chạy ẩn
     options.add_argument("--disable-gpu")
     options.add_argument("--disable-software-rasterizer")
+    options.add_argument("--headless=new")
 
+    # Tạo thư mục user-data-dir tạm (tránh lỗi trùng session)
+    user_data_dir = tempfile.mkdtemp()
+    options.add_argument(f"--user-data-dir={user_data_dir}")
+
+    # Nếu bạn dùng google-chrome bản deb:
+    options.binary_location = "/usr/bin/google-chrome"
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=options)
 
