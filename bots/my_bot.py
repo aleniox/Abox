@@ -16,6 +16,7 @@ import modules.tools.tool_searchs as tool_searchs
 import modules.tools.tool_login as tool_login
 import modules.config as config
 import bots.upload_media as upload_media
+from selenium.common.exceptions import WebDriverException, TimeoutException
 from discord import Embed, Color
 
 # Configure logging
@@ -77,15 +78,47 @@ class FormView(discord.ui.View):
 @bot.command(name="ckin")
 async def checkin_and_out(ctx, style: str = 'ls'):
     async with ctx.channel.typing():
-        with open("downloads/cache/login_info.csv", "r", encoding="utf-8") as f:
-            reader = csv.reader(f)
-            rows = list(reader)
-        # print(rows)
-        print(style)
-        for row in rows:
-            image_path = tool_login.login_and_click(host= row[0], username=row[1], password=row[2], style=style)
-            await ctx.channel.send(file=discord.File(image_path))
-    await ctx.channel.send("Đã chấm công xong thưa ngài")
+        rows = []
+        
+        # 1. Đọc tệp CSV (Bắt lỗi tệp)
+        try:
+            with open("downloads/cache/login_info.csv", "r", encoding="utf-8") as f:
+                rows = list(csv.reader(f))
+        except FileNotFoundError:
+            await ctx.channel.send("❌ **Lỗi:** Không tìm thấy tệp `login_info.csv`.")
+            return
+
+        print(f"Bắt đầu chấm công, style: {style}")
+        
+        # 2. Lặp qua từng tài khoản (Bắt lỗi xử lý và Selenium)
+        for i, row in enumerate(rows):
+            host = row[0] if len(row) > 0 else "N/A"
+            
+            try:
+                # Kiểm tra đủ 3 cột cơ bản
+                if len(row) < 3:
+                    await ctx.channel.send(f"⚠️ **Bỏ qua:** Dòng #{i+1} (`{host}`). Thiếu Host/User/Pass.")
+                    continue
+                    
+                image_path = tool_login.login_and_click(
+                    host=row[0], 
+                    username=row[1], 
+                    password=row[2], 
+                    style=style
+                )
+                
+                # Thành công
+                await ctx.channel.send(f"✅ Host `{host}`: **Thành công.**", file=discord.File(image_path))
+
+            except (WebDriverException, TimeoutException) as e:
+                # Lỗi Selenium/WebDriver
+                await ctx.channel.send(f"❌ Host `{host}`: **Lỗi WebDriver/Timeout.** Chi tiết: `{type(e).__name__}`")
+            except Exception as e:
+                # Lỗi chung
+                await ctx.channel.send(f"❌ Host `{host}`: **Lỗi chung.** Chi tiết: `{type(e).__name__}`")
+
+    # 3. Kết thúc
+    await ctx.channel.send("Đã hoàn tất quá trình chấm công.")
 # ============================================================
 @bot.command(name="info")
 async def send_info(ctx):

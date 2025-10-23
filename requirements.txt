@@ -1,7 +1,7 @@
 discord.py
-ollama
+# ollama
 youtube_search
-chromadb
+# chromadb
 sentence_transformers
 SpeechRecognition
 whisperx==3.3.2
