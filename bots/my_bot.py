@@ -110,11 +110,13 @@ async def checkin_and_out(ctx, style: str = 'ls'):
                 # Thành công
                 await ctx.channel.send(f"✅ Host `{host}`: **Thành công.**", file=discord.File(image_path))
 
-            except (WebDriverException, TimeoutException) as e:
-                # Lỗi Selenium/WebDriver
-                await ctx.channel.send(f"❌ Host `{host}`: **Lỗi WebDriver/Timeout.** Chi tiết: `{type(e).__name__}`")
+            # except (WebDriverException, TimeoutException) as e:
+            #     # Lỗi Selenium/WebDriver
+            #     await ctx.channel.send(f"❌ Host `{host}`: **Lỗi WebDriver/Timeout.** Chi tiết: `{type(e).__name__}`")
             except Exception as e:
                 # Lỗi chung
+                import traceback
+                traceback.print_exc()
                 await ctx.channel.send(f"❌ Host `{host}`: **Lỗi chung.** Chi tiết: `{type(e).__name__}`")
 
     # 3. Kết thúc

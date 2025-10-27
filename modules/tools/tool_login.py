@@ -1,6 +1,7 @@
 from selenium import webdriver
 import time
 import tempfile
+import os, shutil
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
@@ -75,5 +76,13 @@ def login_and_click(
 
     finally:
         driver.quit()
+        if user_data_dir and os.path.exists(user_data_dir):
+            try:
+                # shutil.rmtree xóa thư mục và tất cả nội dung đệ quy
+                shutil.rmtree(user_data_dir)
+                print(f"Đã dọn dẹp thư mục tạm: {user_data_dir}")
+            except Exception as e:
+                # Nếu không thể xóa (vì lý do nào đó), in ra cảnh báo
+                print(f"CẢNH BÁO: Không thể xóa thư mục tạm {user_data_dir}. Lỗi: {e}")
 
     return output

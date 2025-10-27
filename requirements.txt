@@ -18,3 +18,4 @@ langchain_ollama
 
 # .\llamacpp\llama-mtmd-cli.exe -m {text_model}.gguf --mmproj mmproj.gguf --image your_image.jpg
 
+# apt-get install -y libnss3 libdbus-glib-1-2 libasound2t64 libdrm2

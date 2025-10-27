@@ -5,6 +5,7 @@ FROM nvidia/cuda:13.0.1-cudnn-runtime-ubuntu24.04
 
 RUN apt-get update && apt-get install -y \
     python3 \
+    ffmpeg \
     python3-pip \
     tesseract-ocr \
     tesseract-ocr-vie \
