@@ -1,5 +1,7 @@
+from discord.ext import tasks
 import discord
 from discord.ext import commands
+from datetime import datetime, time as dt_time
 # from discord.ui import Button, View
 
 import os
@@ -16,9 +18,10 @@ import modules.tools.tool_searchs as tool_searchs
 import modules.tools.tool_login as tool_login
 import modules.config as config
 import bots.upload_media as upload_media
-from selenium.common.exceptions import WebDriverException, TimeoutException
+# from selenium.common.exceptions import WebDriverException, TimeoutException
 from discord import Embed, Color
-
+import pytz
+VN_TZ = pytz.timezone("Asia/Ho_Chi_Minh")
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -29,6 +32,7 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOK")
+USER_ID = int(os.getenv("USER_ID")) if os.getenv("USER_ID") else None
 if not TOKEN:
     logger.error("DISCORD_TOK not found in environment variables.")
     raise ValueError("DISCORD_TOK is required.")
@@ -110,9 +114,6 @@ async def checkin_and_out(ctx, style: str = 'ls'):
                 # Thành công
                 await ctx.channel.send(f"✅ Host `{host}`: **Thành công.**", file=discord.File(image_path))
 
-            # except (WebDriverException, TimeoutException) as e:
-            #     # Lỗi Selenium/WebDriver
-            #     await ctx.channel.send(f"❌ Host `{host}`: **Lỗi WebDriver/Timeout.** Chi tiết: `{type(e).__name__}`")
             except Exception as e:
                 # Lỗi chung
                 import traceback
@@ -121,7 +122,50 @@ async def checkin_and_out(ctx, style: str = 'ls'):
 
     # 3. Kết thúc
     await ctx.channel.send("Đã hoàn tất quá trình chấm công.")
+
+async def run_login_task():
+    print("Đã đến lúc chạy login_and_click()...")
+    user = await bot.fetch_user(USER_ID)
+    with open("downloads/cache/login_info.csv", "r", encoding="utf-8") as f:
+        rows = list(csv.reader(f))
+    for i, row in enumerate(rows):
+            host = row[0] if len(row) > 0 else "N/A"
+            
+            try:
+                # Kiểm tra đủ 3 cột cơ bản
+                if len(row) < 3:
+                    await user.send(f"⚠️ **Bỏ qua:** Dòng #{i+1} (`{host}`). Thiếu Host/User/Pass.")
+                    continue
+                image_path = await asyncio.to_thread(
+                    tool_login.login_and_click,
+                    host=row[0], 
+                    username=row[1], 
+                    password=row[2], 
+                    style="ls"
+                )
+                await user.send(f"✅ Host `{host}`: **Thành công.**", file=discord.File(image_path))
+            except Exception as e:
+                # Lỗi chung
+                import traceback
+                traceback.print_exc()
+                await user.send(f"❌ Host `{host}`: **Lỗi chung.** Chi tiết: `{type(e).__name__}`")
+
+# Task chạy mỗi phút, kiểm tra đến 05:30
+@tasks.loop(minutes=1)
+async def daily_task():
+    now = datetime.now(VN_TZ).time()
+    target = dt_time(17, 32)
+    print(f"Kiểm tra thời gian hiện tại: {now}, mục tiêu: {target}")
+    if now.hour == target.hour and now.minute == target.minute:
+        await run_login_task()
+
+@daily_task.before_loop
+async def before():
+    await bot.wait_until_ready()
+    print("Daily task started.")
+
 # ============================================================
+
 @bot.command(name="info")
 async def send_info(ctx):
     """Gửi tin nhắn embed đẹp mắt"""
@@ -137,6 +181,7 @@ async def send_info(ctx):
     embed.set_footer(text=f"{bot.user.name} Bot © 2025")
     
     await ctx.send(embed=embed)
+
 
 
 @bot.command(name="youtube")
@@ -225,6 +270,7 @@ async def run_bot():
     while True:
         try:
             logger.info(f"Attempting to connect to Discord (attempt {connection_retries + 1}/{MAX_RETRIES})")
+            daily_task.start()
             await bot.start(TOKEN)
         except discord.errors.ConnectionClosed as e:
             connection_retries += 1

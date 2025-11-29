@@ -1,10 +1,7 @@
-# import ollama
-# import json
-# import modules.tools.tool_searchs as tool_searchs
-# import modules.tools.tool_others as tool_others
 import modules.config as config
 import modules.tools.tool_generate as tool_generate
 import modules.core.call_api_llm as call_api_llm
+import json
 
 def clean_excessive_newlines(text):
     """
@@ -35,7 +32,8 @@ def smart_agent_decision(user_message: str):
                                                         lower_bound=args.get('lower_bound'),
                                                         upper_bound=args.get('upper_bound'))
             elif tool['function']['name'] == 'search_web':
-                contexts = tool_call.web_search(query=tool['function']['arguments']['query'])
+                args = json.loads(tool['function']['arguments'])
+                contexts = tool_call.web_search(query=args['query'])
                 # print(contexts, type(contexts))
                 # context_ = [f"Title: {context['title']}, Description: {context['url']}, Url: {context['url']}" for context in contexts]
                 context_ = contexts[1]
