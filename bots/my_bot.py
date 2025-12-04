@@ -154,10 +154,43 @@ async def run_login_task():
 @tasks.loop(minutes=1)
 async def daily_task():
     now = datetime.now(VN_TZ).time()
-    target = dt_time(17, 32)
-    print(f"Kiểm tra thời gian hiện tại: {now}, mục tiêu: {target}")
-    if now.hour == target.hour and now.minute == target.minute:
-        await run_login_task()
+    # Các khung giờ muốn gửi thông báo (ví dụ: 08:15 và 17:30)
+    targets = [dt_time(8, 45), dt_time(8, 46)]
+    # Kiểm tra xem thời gian hiện tại có trùng bất kỳ khung giờ trong targets không
+    if any(now.hour == t.hour and now.minute == t.minute for t in targets):
+        try:
+            # Send a DM with a button to trigger the task instead of running automatically
+            user = await bot.fetch_user(USER_ID)
+            class RunLoginView(discord.ui.View):
+                def __init__(self, allowed_user_id: int, timeout: int = 60 * 30):
+                    super().__init__(timeout=timeout)
+                    self.allowed_user_id = allowed_user_id
+
+                @discord.ui.button(label="Chạy chấm công", style=discord.ButtonStyle.primary)
+                async def run_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+                    # Only allow the specified user to click
+                    if self.allowed_user_id and interaction.user.id != self.allowed_user_id:
+                        await interaction.response.send_message("Bạn không có quyền thực hiện hành động này.", ephemeral=True)
+                        return
+
+                    # Acknowledge and run the task in background
+                    await interaction.response.send_message("Bắt đầu chạy chấm công...", ephemeral=True)
+                    # Disable buttons to prevent double-click
+                    for item in self.children:
+                        item.disabled = True
+                    try:
+                        # Edit the original message to disable the button
+                        await interaction.message.edit(view=self)
+                    except Exception:
+                        pass
+
+                    # Run login task in background so callback returns immediately
+                    asyncio.create_task(run_login_task())
+
+            view = RunLoginView(USER_ID)
+            await user.send("Đã đến giờ chấm công. Nhấn nút bên dưới để bắt đầu:", view=view)
+        except Exception as e:
+            logger.error(f"Không thể gửi DM để thông báo chấm công: {e}")
 
 @daily_task.before_loop
 async def before():
