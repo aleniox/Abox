@@ -1,44 +1,9 @@
 from duckduckgo_search import DDGS
 from langchain_community.document_loaders import WebBaseLoader
 from duckduckgo_search.exceptions import DuckDuckGoSearchException
+from sympy import symbols, diff, integrate, sin, cos, exp, sqrt, N
+from sympy.parsing.sympy_parser import parse_expr
 
-
-# def add(a, b): return int(a) + int(b)
-
-
-# def substract(a, b): return int(a) - int(b)
-
-
-# subtract_tool = {
-#     'type': 'function',
-#     'function': {
-#         'name': 'subtract_tool',
-#         'description': 'Subtract two numbers',
-#         'parameters': {
-#             'type': 'object',
-#             'required': ['a', 'b'],
-#             'properties': {
-#                 'a': {'type': 'number', 'description': 'The first number'},
-#                 'b': {'type': 'number', 'description': 'The second number'},
-#             },
-#         },
-#     },
-# }
-# add_tool = {
-#     'type': 'function',
-#     'function': {
-#         'name': 'add_tool',
-#         'description': 'Add two numbers',
-#         'parameters': {
-#             'type': 'object',
-#             'required': ['a', 'b'],
-#             'properties': {
-#                 'a': {'type': 'number', 'description': 'The first number'},
-#                 'b': {'type': 'number', 'description': 'The second number'},
-#             },
-#         },
-#     },
-# }
 
 search_web_tool = {
     "type": "function",
@@ -58,8 +23,6 @@ search_web_tool = {
         }
     }
 }
-
-
 
 
 def search_with_ddgs(query, max_results=5):
@@ -156,9 +119,6 @@ calculus_tool = {
         }
     }
 }
-
-from sympy import symbols, diff, integrate, sin, cos, exp, sqrt, N
-from sympy.parsing.sympy_parser import parse_expr
 
 def calculus_calculator(
     expression: str,
