@@ -141,7 +141,7 @@ async def run_login_task():
                     host=row[0], 
                     username=row[1], 
                     password=row[2], 
-                    style="ls"
+                    style="cc"
                 )
                 await user.send(f"✅ Host `{host}`: **Thành công.**", file=discord.File(image_path))
             except Exception as e:
