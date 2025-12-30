@@ -155,7 +155,7 @@ async def run_login_task():
 async def daily_task():
     now = datetime.now(VN_TZ).time()
     # Các khung giờ muốn gửi thông báo (ví dụ: 08:15 và 17:30)
-    targets = [dt_time(8, 00), dt_time(17, 31)]
+    targets = [dt_time(7, 30), dt_time(17, 31), dt_time(13, 45)]
     # Kiểm tra xem thời gian hiện tại có trùng bất kỳ khung giờ trong targets không
     if any(now.hour == t.hour and now.minute == t.minute for t in targets):
         try:
@@ -165,6 +165,7 @@ async def daily_task():
                 def __init__(self, allowed_user_id: int, timeout: int = 60 * 30):
                     super().__init__(timeout=timeout)
                     self.allowed_user_id = allowed_user_id
+                    self.timer_task = None
 
                 @discord.ui.button(label="Chạy chấm công", style=discord.ButtonStyle.primary)
                 async def run_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -186,6 +187,44 @@ async def daily_task():
 
                     # Run login task in background so callback returns immediately
                     asyncio.create_task(run_login_task())
+
+                @discord.ui.button(label="Hẹn giờ 30 phút", style=discord.ButtonStyle.secondary, emoji="⏰")
+                async def timer_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+                    # Only allow the specified user to click
+                    if self.allowed_user_id and interaction.user.id != self.allowed_user_id:
+                        await interaction.response.send_message("Bạn không có quyền thực hiện hành động này.", ephemeral=True)
+                        return
+
+                    # Cancel existing timer if any
+                    if self.timer_task and not self.timer_task.done():
+                        self.timer_task.cancel()
+                        await interaction.response.send_message("❌ Đã hủy hẹn giờ trước đó. Bắt đầu hẹn giờ mới 30 phút...", ephemeral=True)
+                    else:
+                        await interaction.response.send_message("⏰ Đã đặt hẹn giờ 30 phút. Sẽ tự động chấm công sau 30 phút...", ephemeral=True)
+
+                    # Disable buttons to prevent double-click
+                    for item in self.children:
+                        item.disabled = True
+                    try:
+                        # Edit the original message to disable the button
+                        await interaction.message.edit(view=self)
+                    except Exception:
+                        pass
+
+                    # Create async task for delayed execution
+                    async def delayed_checkin():
+                        try:
+                            await asyncio.sleep(30 * 60)  # 30 minutes in seconds
+                            user = await bot.fetch_user(self.allowed_user_id)
+                            await user.send("⏰ Đã hết 30 phút! Bắt đầu chấm công...")
+                            await run_login_task()
+                        except asyncio.CancelledError:
+                            pass
+                        except Exception as e:
+                            logger.error(f"Lỗi khi chạy hẹn giờ chấm công: {e}")
+
+                    # Start the timer task
+                    self.timer_task = asyncio.create_task(delayed_checkin())
 
             view = RunLoginView(USER_ID)
             await user.send("Đã đến giờ chấm công. Nhấn nút bên dưới để bắt đầu:", view=view)
