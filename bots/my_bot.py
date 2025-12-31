@@ -47,6 +47,13 @@ connection_retries = 0
 MAX_RETRIES = 5
 RETRY_DELAY = 5  # seconds
 
+# Check-in Configuration
+CHECKIN_CONFIG = {
+    "MORNING_NOTIFY": dt_time(7, 30),
+    "AFTERNOON_NOTIFY": dt_time(17, 31),
+    "DEBUG_NOTIFY": dt_time(17, 31)
+}
+
 class InfoForm(discord.ui.Modal, title="Nhập Thông Tin"):
 
     url = discord.ui.TextInput(label="Nhập link chấm công", placeholder="Nhập url...")
@@ -168,9 +175,11 @@ class CancelAfternoonView(discord.ui.View):
             task.cancel()
             del scheduled_tasks[self.user_id]
             await interaction.response.send_message("✅ Đã hủy chấm công chiều.", ephemeral=True)
-            # Disable button
-            button.disabled = True
-            await interaction.message.edit(view=self)
+            # Delete the message containing the button
+            try:
+                await interaction.message.delete()
+            except Exception:
+                pass
         else:
             await interaction.response.send_message("⚠️ Không tìm thấy lịch chấm công chiều nào.", ephemeral=True)
 
@@ -178,8 +187,12 @@ class CancelAfternoonView(discord.ui.View):
 @tasks.loop(minutes=1)
 async def daily_task():
     now = datetime.now(VN_TZ).time()
-    # Các khung giờ muốn gửi thông báo (ví dụ: 08:15 và 17:30)
-    targets = [dt_time(7, 30), dt_time(17, 31), dt_time(9, 55)]
+    # Các khung giờ muốn gửi thông báo
+    targets = [
+        CHECKIN_CONFIG["MORNING_NOTIFY"], 
+        CHECKIN_CONFIG["AFTERNOON_NOTIFY"], 
+        CHECKIN_CONFIG["DEBUG_NOTIFY"]
+    ]
     # Kiểm tra xem thời gian hiện tại có trùng bất kỳ khung giờ trong targets không
     if any(now.hour == t.hour and now.minute == t.minute for t in targets):
         try:
@@ -190,6 +203,14 @@ async def daily_task():
                     super().__init__(timeout=timeout)
                     self.allowed_user_id = allowed_user_id
                     self.timer_task = None
+                    
+                    # Disable auto run button if afternoon (>= 12:00)
+                    now = datetime.now(VN_TZ)
+                    if now.hour >= 12:
+                        for child in self.children:
+                            if isinstance(child, discord.ui.Button) and child.label == "Chấm công tự động":
+                                child.disabled = True
+                                break
 
                 @discord.ui.button(label="Chạy chấm công", style=discord.ButtonStyle.primary)
                 async def run_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -236,34 +257,47 @@ async def daily_task():
                     # Check for afternoon scheduling
                     now = datetime.now(VN_TZ)
                     if now.hour < 12:
-                        # Schedule for 17:31 today
-                        target_time = now.replace(hour=9, minute=56, second=0, microsecond=0)
+                        # Schedule for afternoon today
+                        target_time = now.replace(
+                            hour=CHECKIN_CONFIG["AFTERNOON_NOTIFY"].hour, 
+                            minute=CHECKIN_CONFIG["AFTERNOON_NOTIFY"].minute, 
+                            second=0, 
+                            microsecond=0
+                        )
                         if target_time > now:
                             delay = (target_time - now).total_seconds()
                             
+                            # Cancel existing task if any
+                            if self.allowed_user_id in scheduled_tasks:
+                                scheduled_tasks[self.allowed_user_id].cancel()
+
+                            # Send message first to get reference
+                            cancel_msg = await interaction.followup.send(
+                                f"✅ Đã lên lịch chấm công chiều lúc {target_time.strftime('%H:%M')}.",
+                                view=CancelAfternoonView(self.allowed_user_id),
+                                ephemeral=True
+                            )
+
                             async def afternoon_job():
                                 try:
                                     await asyncio.sleep(delay)
                                     user = await bot.fetch_user(self.allowed_user_id)
                                     await user.send("⏰ Đã đến giờ chiều! Tự động chấm công...")
                                     await run_login_task()
+                                    
+                                    # Delete the cancel message when done
+                                    try:
+                                        await cancel_msg.delete()
+                                    except Exception:
+                                        pass
+
                                     if self.allowed_user_id in scheduled_tasks:
                                         del scheduled_tasks[self.allowed_user_id]
                                 except asyncio.CancelledError:
                                     pass
-                            
-                            # Cancel existing task if any
-                            if self.allowed_user_id in scheduled_tasks:
-                                scheduled_tasks[self.allowed_user_id].cancel()
 
                             task = asyncio.create_task(afternoon_job())
                             scheduled_tasks[self.allowed_user_id] = task
-                            
-                            await interaction.followup.send(
-                                f"✅ Đã lên lịch chấm công chiều lúc 17:31.",
-                                view=CancelAfternoonView(self.allowed_user_id),
-                                ephemeral=True
-                            )
 
                 @discord.ui.button(label="Hẹn giờ 30 phút", style=discord.ButtonStyle.secondary, emoji="⏰")
                 async def timer_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -330,8 +364,6 @@ async def send_info(ctx):
     embed.set_footer(text=f"{bot.user.name} Bot © 2025")
     
     await ctx.send(embed=embed)
-
-
 
 @bot.command(name="youtube")
 async def youtube(ctx, *, query):
