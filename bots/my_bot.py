@@ -141,7 +141,7 @@ async def run_login_task():
                     host=row[0], 
                     username=row[1], 
                     password=row[2], 
-                    style="cc"
+                    style="ls"
                 )
                 await user.send(f"✅ Host `{host}`: **Thành công.**", file=discord.File(image_path))
             except Exception as e:
@@ -150,12 +150,36 @@ async def run_login_task():
                 traceback.print_exc()
                 await user.send(f"❌ Host `{host}`: **Lỗi chung.** Chi tiết: `{type(e).__name__}`")
 
+scheduled_tasks = {}
+
+class CancelAfternoonView(discord.ui.View):
+    def __init__(self, user_id):
+        super().__init__(timeout=None)
+        self.user_id = user_id
+
+    @discord.ui.button(label="Hủy chấm công chiều", style=discord.ButtonStyle.danger)
+    async def cancel_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+             await interaction.response.send_message("Bạn không có quyền.", ephemeral=True)
+             return
+        
+        task = scheduled_tasks.get(self.user_id)
+        if task:
+            task.cancel()
+            del scheduled_tasks[self.user_id]
+            await interaction.response.send_message("✅ Đã hủy chấm công chiều.", ephemeral=True)
+            # Disable button
+            button.disabled = True
+            await interaction.message.edit(view=self)
+        else:
+            await interaction.response.send_message("⚠️ Không tìm thấy lịch chấm công chiều nào.", ephemeral=True)
+
 # Task chạy mỗi phút, kiểm tra đến 05:30
 @tasks.loop(minutes=1)
 async def daily_task():
     now = datetime.now(VN_TZ).time()
     # Các khung giờ muốn gửi thông báo (ví dụ: 08:15 và 17:30)
-    targets = [dt_time(7, 30), dt_time(17, 31)]
+    targets = [dt_time(7, 30), dt_time(17, 31), dt_time(9, 55)]
     # Kiểm tra xem thời gian hiện tại có trùng bất kỳ khung giờ trong targets không
     if any(now.hour == t.hour and now.minute == t.minute for t in targets):
         try:
@@ -187,6 +211,59 @@ async def daily_task():
 
                     # Run login task in background so callback returns immediately
                     asyncio.create_task(run_login_task())
+
+                @discord.ui.button(label="Chấm công tự động", style=discord.ButtonStyle.success)
+                async def auto_run_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+                    # Only allow the specified user to click
+                    if self.allowed_user_id and interaction.user.id != self.allowed_user_id:
+                        await interaction.response.send_message("Bạn không có quyền thực hiện hành động này.", ephemeral=True)
+                        return
+
+                    # Acknowledge and run the task in background
+                    await interaction.response.send_message("Bắt đầu chạy chấm công và lên lịch chiều...", ephemeral=True)
+                    # Disable buttons to prevent double-click
+                    for item in self.children:
+                        item.disabled = True
+                    try:
+                        # Edit the original message to disable the button
+                        await interaction.message.edit(view=self)
+                    except Exception:
+                        pass
+
+                    # Run login task in background so callback returns immediately
+                    asyncio.create_task(run_login_task())
+
+                    # Check for afternoon scheduling
+                    now = datetime.now(VN_TZ)
+                    if now.hour < 12:
+                        # Schedule for 17:31 today
+                        target_time = now.replace(hour=9, minute=56, second=0, microsecond=0)
+                        if target_time > now:
+                            delay = (target_time - now).total_seconds()
+                            
+                            async def afternoon_job():
+                                try:
+                                    await asyncio.sleep(delay)
+                                    user = await bot.fetch_user(self.allowed_user_id)
+                                    await user.send("⏰ Đã đến giờ chiều! Tự động chấm công...")
+                                    await run_login_task()
+                                    if self.allowed_user_id in scheduled_tasks:
+                                        del scheduled_tasks[self.allowed_user_id]
+                                except asyncio.CancelledError:
+                                    pass
+                            
+                            # Cancel existing task if any
+                            if self.allowed_user_id in scheduled_tasks:
+                                scheduled_tasks[self.allowed_user_id].cancel()
+
+                            task = asyncio.create_task(afternoon_job())
+                            scheduled_tasks[self.allowed_user_id] = task
+                            
+                            await interaction.followup.send(
+                                f"✅ Đã lên lịch chấm công chiều lúc 17:31.",
+                                view=CancelAfternoonView(self.allowed_user_id),
+                                ephemeral=True
+                            )
 
                 @discord.ui.button(label="Hẹn giờ 30 phút", style=discord.ButtonStyle.secondary, emoji="⏰")
                 async def timer_button(self, interaction: discord.Interaction, button: discord.ui.Button):
