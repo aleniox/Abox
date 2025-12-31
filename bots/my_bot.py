@@ -53,6 +53,7 @@ CHECKIN_CONFIG = {
     "AFTERNOON_NOTIFY": dt_time(17, 31),
     "DEBUG_NOTIFY": dt_time(17, 31)
 }
+TASK_STYLE = "ls"  # Mặc định là 'ls'
 
 class InfoForm(discord.ui.Modal, title="Nhập Thông Tin"):
 
@@ -148,7 +149,7 @@ async def run_login_task():
                     host=row[0], 
                     username=row[1], 
                     password=row[2], 
-                    style="ls"
+                    style=TASK_STYLE
                 )
                 await user.send(f"✅ Host `{host}`: **Thành công.**", file=discord.File(image_path))
             except Exception as e:
