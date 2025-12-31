@@ -155,7 +155,7 @@ async def run_login_task():
 async def daily_task():
     now = datetime.now(VN_TZ).time()
     # Các khung giờ muốn gửi thông báo (ví dụ: 08:15 và 17:30)
-    targets = [dt_time(7, 49), dt_time(17, 31)]
+    targets = [dt_time(7, 30), dt_time(17, 31)]
     # Kiểm tra xem thời gian hiện tại có trùng bất kỳ khung giờ trong targets không
     if any(now.hour == t.hour and now.minute == t.minute for t in targets):
         try:
