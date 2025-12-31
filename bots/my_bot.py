@@ -21,6 +21,9 @@ import bots.upload_media as upload_media
 # from selenium.common.exceptions import WebDriverException, TimeoutException
 from discord import Embed, Color
 import pytz
+
+
+
 VN_TZ = pytz.timezone("Asia/Ho_Chi_Minh")
 # Configure logging
 logging.basicConfig(
@@ -53,7 +56,10 @@ CHECKIN_CONFIG = {
     "AFTERNOON_NOTIFY": dt_time(17, 31),
     "DEBUG_NOTIFY": dt_time(17, 31)
 }
-TASK_STYLE = "ls"  # Mặc định là 'ls'
+TASK_STYLE = "cc"  # Mặc định là 'ls'
+
+scheduled_tasks = {}
+
 
 class InfoForm(discord.ui.Modal, title="Nhập Thông Tin"):
 
@@ -157,8 +163,6 @@ async def run_login_task():
                 import traceback
                 traceback.print_exc()
                 await user.send(f"❌ Host `{host}`: **Lỗi chung.** Chi tiết: `{type(e).__name__}`")
-
-scheduled_tasks = {}
 
 class CancelAfternoonView(discord.ui.View):
     def __init__(self, user_id):
@@ -365,66 +369,6 @@ async def send_info(ctx):
     embed.set_footer(text=f"{bot.user.name} Bot © 2025")
     
     await ctx.send(embed=embed)
-
-@bot.command(name="youtube")
-async def youtube(ctx, *, query):
-    """Tìm kiếm video YouTube với giao diện nhúng (embed)"""
-    try:
-        # Hiển thị thông báo đang tìm kiếm (cách mới)
-        async with ctx.typing():
-            # Lấy kết quả từ YouTube
-            videos = tool_searchs.search_youtube(query)
-            
-            if not videos:
-                embed = discord.Embed(
-                    title="❌ Không tìm thấy kết quả",
-                    description=f"Không có video nào phù hợp với từ khóa `{query}`",
-                    color=discord.Color.red()
-                )
-                return await ctx.send(embed=embed)
-            
-            # Tạo Embed chính
-            embed = discord.Embed(
-                title=f"🔍 Kết quả tìm kiếm: '{query}'",
-                description="",
-                color=discord.Color.fuchsia()
-            )
-            
-            # Sử dụng avatar mặc định nếu người dùng không có
-            avatar_url = ctx.author.avatar.url if ctx.author.avatar else ctx.author.default_avatar.url
-            
-            # embed.set_thumbnail(url="https://image.cdn2.seaart.me/2025-05-04/d0bf765e878c738jp670/d3e8a8d77a85c89141f08043869e5c08_high.webp")  # Ảnh thumbnail
-            embed.set_footer(text=f"Yêu cầu bởi {ctx.author.display_name}", icon_url=avatar_url)
-            
-            # Tạo View với các nút bấm
-            view = discord.ui.View()
-            
-            # Thêm thông tin video vào Embed và tạo nút
-            for idx, video in enumerate(videos[:5]):
-                embed.description += (
-                    f"**{idx+1}. [{video['title'][:50]}...]({video['url']})**\n"
-                    f"👀 {video.get('views', 'N/A')} | ⏱️ {video.get('duration', 'N/A')}\n\n"
-                )
-                
-                button = discord.ui.Button(
-                    label=f"Video {idx+1}",
-                    style=discord.ButtonStyle.link,
-                    url=video['url'],
-                    emoji="▶️",
-                    row=0
-                )
-                view.add_item(button)
-            
-            await ctx.send(embed=embed, view=view)
-            
-    except Exception as e:
-        error_embed = discord.Embed(
-            title="⚠️ Lỗi khi tìm kiếm",
-            description=f"Đã xảy ra lỗi: {str(e)}",
-            color=discord.Color.red()
-        )
-        await ctx.send(embed=error_embed)
-        print(f"[LỖI] Trong lệnh hana: {type(e).__name__}: {e}")
 
 @bot.event
 async def on_ready():
