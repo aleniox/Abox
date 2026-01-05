@@ -53,8 +53,8 @@ RETRY_DELAY = 5  # seconds
 # Check-in Configuration
 CHECKIN_CONFIG = {
     "MORNING_NOTIFY": dt_time(7, 30),
-    "AFTERNOON_NOTIFY": dt_time(17, 31),
-    "DEBUG_NOTIFY": dt_time(17, 31)
+    "AFTERNOON_NOTIFY": dt_time(17, 32),
+    "DEBUG_NOTIFY": dt_time(17, 32)
 }
 TASK_STYLE = "cc"  # Mặc định là 'ls'
 
@@ -330,10 +330,52 @@ async def daily_task():
                     # Create async task for delayed execution
                     async def delayed_checkin():
                         try:
-                            await asyncio.sleep(30 * 60)  # 30 minutes in seconds
+                            await asyncio.sleep(1 * 60)  # 30 minutes in seconds
                             user = await bot.fetch_user(self.allowed_user_id)
                             await user.send("⏰ Đã hết 30 phút! Bắt đầu chấm công...")
                             await run_login_task()
+                            
+                            # After morning check-in, show afternoon automatic check-in option
+                            now = datetime.now(VN_TZ)
+                            target_time = now.replace(
+                                hour=CHECKIN_CONFIG["AFTERNOON_NOTIFY"].hour, 
+                                minute=CHECKIN_CONFIG["AFTERNOON_NOTIFY"].minute, 
+                                second=0, 
+                                microsecond=0
+                            )
+                            if target_time > now:
+                                delay = (target_time - now).total_seconds()
+                                
+                                # Cancel existing task if any
+                                if self.allowed_user_id in scheduled_tasks:
+                                    scheduled_tasks[self.allowed_user_id].cancel()
+
+                                # Send message with afternoon check-in option
+                                afternoon_msg = await user.send(
+                                    f"✅ Sẵn sàng chấm công chiều lúc {target_time.strftime('%H:%M')}:",
+                                    view=CancelAfternoonView(self.allowed_user_id)
+                                )
+
+                                async def afternoon_job():
+                                    try:
+                                        await asyncio.sleep(delay)
+                                        user = await bot.fetch_user(self.allowed_user_id)
+                                        await user.send("⏰ Đã hết giờ hãy cút khỏi công ty! Tự động chấm công...")
+                                        await run_login_task()
+                                        
+                                        # Delete the cancel message when done
+                                        try:
+                                            await afternoon_msg.delete()
+                                        except Exception:
+                                            pass
+
+                                        if self.allowed_user_id in scheduled_tasks:
+                                            del scheduled_tasks[self.allowed_user_id]
+                                    except asyncio.CancelledError:
+                                        pass
+
+                                task = asyncio.create_task(afternoon_job())
+                                scheduled_tasks[self.allowed_user_id] = task
                         except asyncio.CancelledError:
                             pass
                         except Exception as e:
