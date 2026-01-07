@@ -49,16 +49,18 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 connection_retries = 0
 MAX_RETRIES = 5
 RETRY_DELAY = 5  # seconds
+SETTIMER = 30
 
 # Check-in Configuration
 CHECKIN_CONFIG = {
     "MORNING_NOTIFY": dt_time(7, 30),
-    "AFTERNOON_NOTIFY": dt_time(17, 32),
-    "DEBUG_NOTIFY": dt_time(17, 32)
+    "DEBUG_NOTIFY": dt_time(17, 31),
+    "AFTERNOON_NOTIFY": dt_time(17, 31)
 }
-TASK_STYLE = "cc"  # Mặc định là 'ls'
+TASK_STYLE = "cc"  # Mặc định là 'cc'
 
 scheduled_tasks = {}
+last_sent_time = None  # Theo dõi (hour, minute) cuối cùng đã gửi thông báo
 
 
 class InfoForm(discord.ui.Modal, title="Nhập Thông Tin"):
@@ -138,6 +140,7 @@ async def checkin_and_out(ctx, style: str = 'ls'):
     await ctx.channel.send("Đã hoàn tất quá trình chấm công.")
 
 async def run_login_task():
+    global last_sent_time
     print("Đã đến lúc chạy login_and_click()...")
     user = await bot.fetch_user(USER_ID)
     with open("downloads/cache/login_info.csv", "r", encoding="utf-8") as f:
@@ -163,6 +166,10 @@ async def run_login_task():
                 import traceback
                 traceback.print_exc()
                 await user.send(f"❌ Host `{host}`: **Lỗi chung.** Chi tiết: `{type(e).__name__}`")
+    
+    # Cập nhật last_sent_time để tránh gửi thông báo lại trong phút hiện tại
+    now = datetime.now(VN_TZ)
+    last_sent_time = (now.hour, now.minute)
 
 class CancelAfternoonView(discord.ui.View):
     def __init__(self, user_id):
@@ -191,15 +198,26 @@ class CancelAfternoonView(discord.ui.View):
 # Task chạy mỗi phút, kiểm tra đến 05:30
 @tasks.loop(minutes=1)
 async def daily_task():
-    now = datetime.now(VN_TZ).time()
+    global last_sent_time
+    now = datetime.now(VN_TZ)
+    now_time = now.time()
+    current_time_tuple = (now_time.hour, now_time.minute)
+    
     # Các khung giờ muốn gửi thông báo
     targets = [
         CHECKIN_CONFIG["MORNING_NOTIFY"], 
         CHECKIN_CONFIG["AFTERNOON_NOTIFY"], 
         CHECKIN_CONFIG["DEBUG_NOTIFY"]
     ]
+    
     # Kiểm tra xem thời gian hiện tại có trùng bất kỳ khung giờ trong targets không
-    if any(now.hour == t.hour and now.minute == t.minute for t in targets):
+    if any(now_time.hour == t.hour and now_time.minute == t.minute for t in targets):
+        # Nếu đã gửi thông báo cho giờ này rồi thì bỏ qua
+        if last_sent_time == current_time_tuple:
+            return
+        
+        # Cập nhật thời gian gửi
+        last_sent_time = current_time_tuple
         try:
             # Send a DM with a button to trigger the task instead of running automatically
             user = await bot.fetch_user(USER_ID)
@@ -217,7 +235,7 @@ async def daily_task():
                                 child.disabled = True
                                 break
 
-                @discord.ui.button(label="Chạy chấm công", style=discord.ButtonStyle.primary)
+                @discord.ui.button(label="Chấm công", style=discord.ButtonStyle.primary, emoji="🚀", row=0)
                 async def run_button(self, interaction: discord.Interaction, button: discord.ui.Button):
                     # Only allow the specified user to click
                     if self.allowed_user_id and interaction.user.id != self.allowed_user_id:
@@ -238,7 +256,7 @@ async def daily_task():
                     # Run login task in background so callback returns immediately
                     asyncio.create_task(run_login_task())
 
-                @discord.ui.button(label="Chấm công tự động", style=discord.ButtonStyle.success)
+                @discord.ui.button(label="Tự động", style=discord.ButtonStyle.success, emoji="🤖", row=0)
                 async def auto_run_button(self, interaction: discord.Interaction, button: discord.ui.Button):
                     # Only allow the specified user to click
                     if self.allowed_user_id and interaction.user.id != self.allowed_user_id:
@@ -304,7 +322,7 @@ async def daily_task():
                             task = asyncio.create_task(afternoon_job())
                             scheduled_tasks[self.allowed_user_id] = task
 
-                @discord.ui.button(label="Hẹn giờ 30 phút", style=discord.ButtonStyle.secondary, emoji="⏰")
+                @discord.ui.button(label="Hẹn giờ 30 phút", style=discord.ButtonStyle.secondary, emoji="⏰", row=0)
                 async def timer_button(self, interaction: discord.Interaction, button: discord.ui.Button):
                     # Only allow the specified user to click
                     if self.allowed_user_id and interaction.user.id != self.allowed_user_id:
@@ -330,7 +348,7 @@ async def daily_task():
                     # Create async task for delayed execution
                     async def delayed_checkin():
                         try:
-                            await asyncio.sleep(1 * 60)  # 30 minutes in seconds
+                            await asyncio.sleep(SETTIMER * 60)  # 30 minutes in seconds
                             user = await bot.fetch_user(self.allowed_user_id)
                             await user.send("⏰ Đã hết 30 phút! Bắt đầu chấm công...")
                             await run_login_task()
