@@ -7,6 +7,13 @@ import requests
 import modules.config as config
 from typing import Optional
 
+# from pyannote.audio import Pipeline
+from transformers import pipeline, WhisperProcessor, AutoModelForSpeechSeq2Seq
+from peft import PeftModel, PeftConfig
+from pydub import AudioSegment
+import os
+import torch
+
 logger = logging.getLogger(__name__)
 
 def convert_audio_to_wav(input_path: str, output_dir: str) -> Optional[str]:
@@ -73,8 +80,8 @@ def process_voice_message(audio_paths: list, temp_dir: str = "temp_audio") -> Op
             return None
         
         # Bước 2: Chuyển thành text
-        text = transcribe_audio_with_whisperx(wav_path)
-        # text = transcribe_audio(wav_path, language="vi-VN")
+        # text = transcribe_audio_with_whisperx(wav_path)
+        text = transcribe_audio(wav_path, language="vi-VN")
         output_text += text + "\n" if text else ""
         # Xóa file tạm (tuỳ chọn)
         os.remove(wav_path)
@@ -88,14 +95,6 @@ def transcribe_api_whisper(audio_paths: str):
             response = requests.post(config.URL, files={'file': f})
         text += response.json()["transcription"]
     return text.strip() if text else None
-
-# from pyannote.audio import Pipeline
-from transformers import pipeline, WhisperProcessor, AutoModelForSpeechSeq2Seq
-from peft import PeftModel, PeftConfig
-from pydub import AudioSegment
-import tempfile
-import os
-import torch
 
 def model_init_speech2text(adapter_model = "viv3-large-lora/checkpoint-3000/adapter_model"):
     device = "cuda" if torch.cuda.is_available() else "cpu"

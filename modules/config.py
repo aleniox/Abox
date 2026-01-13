@@ -5,7 +5,7 @@ ALLOWED_EXTENSIONS = {"txt", "pdf", "png", "jpg", "jpeg", "gif"}
 MODEL_NAME_T = "gemma3:4b"
 MODEL_NAME_G = "qwen3:4b-instruct-2507-q4_K_M"
 MAX_TOKEN_CHAT = 2048
-OLLAMA_API_URLCHAT = "http://192.168.1.222:8070/v1/chat/completions"
+OLLAMA_API_URLCHAT = "http://192.168.1.199:8090/v1/chat/completions"
 TOKENIZE = "Qwen/Qwen3-30B-A3B-Instruct-2507-FP8"
 MODEL_NAME_EMBED = ""
 # "qwen3:1.7b"

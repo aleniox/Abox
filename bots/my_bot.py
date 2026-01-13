@@ -17,6 +17,7 @@ import modules.core.agent_chat as agent_chat
 import modules.tools.tool_searchs as tool_searchs
 import modules.tools.tool_login as tool_login
 import modules.config as config
+import modules.core.voice_clone as text2speech
 import bots.upload_media as upload_media
 # from selenium.common.exceptions import WebDriverException, TimeoutException
 from discord import Embed, Color
@@ -57,7 +58,7 @@ CHECKIN_CONFIG = {
     "DEBUG_NOTIFY": dt_time(17, 31),
     "AFTERNOON_NOTIFY": dt_time(17, 31)
 }
-TASK_STYLE = "cc"  # Mặc định là 'cc'
+TASK_STYLE = "cc"  # Mặc định là 'ls'
 
 scheduled_tasks = {}
 last_sent_time = None  # Theo dõi (hour, minute) cuối cùng đã gửi thông báo
@@ -221,6 +222,89 @@ async def daily_task():
         try:
             # Send a DM with a button to trigger the task instead of running automatically
             user = await bot.fetch_user(USER_ID)
+            class TimerModal(discord.ui.Modal, title="Đặt hẹn giờ"):
+                minutes = discord.ui.TextInput(label="Số phút", placeholder="Nhập số phút (ví dụ: 30)", default="30")
+                
+                def __init__(self, view_instance):
+                    super().__init__()
+                    self.view_instance = view_instance
+
+                async def on_submit(self, interaction: discord.Interaction):
+                    try:
+                        minutes_val = int(self.minutes.value)
+                        if minutes_val <= 0:
+                            raise ValueError
+                    except ValueError:
+                        await interaction.response.send_message("Vui lòng nhập một số nguyên dương hợp lệ.", ephemeral=True)
+                        return
+
+                    # Cancel existing timer if any
+                    if self.view_instance.timer_task and not self.view_instance.timer_task.done():
+                        self.view_instance.timer_task.cancel()
+                        await interaction.response.send_message(f"❌ Đã hủy hẹn giờ trước đó. Bắt đầu hẹn giờ mới {minutes_val} phút...", ephemeral=True)
+                    else:
+                        await interaction.response.send_message(f"⏰ Đã đặt hẹn giờ {minutes_val} phút. Sẽ tự động chấm công sau {minutes_val} phút...", ephemeral=True)
+
+                    # Disable buttons
+                    for item in self.view_instance.children:
+                        item.disabled = True
+                    try:
+                        await interaction.message.edit(view=self.view_instance)
+                    except Exception:
+                        pass
+                    
+                    async def delayed_checkin():
+                        try:
+                            await asyncio.sleep(minutes_val * 60)
+                            user = await bot.fetch_user(self.view_instance.allowed_user_id)
+                            await user.send(f"⏰ Đã hết {minutes_val} phút! Bắt đầu chấm công...")
+                            await run_login_task()
+                            
+                            # After morning check-in, show afternoon automatic check-in option
+                            now = datetime.now(VN_TZ)
+                            target_time = now.replace(
+                                hour=CHECKIN_CONFIG["AFTERNOON_NOTIFY"].hour, 
+                                minute=CHECKIN_CONFIG["AFTERNOON_NOTIFY"].minute, 
+                                second=0, 
+                                microsecond=0
+                            )
+                            if target_time > now:
+                                delay = (target_time - now).total_seconds()
+                                
+                                if self.view_instance.allowed_user_id in scheduled_tasks:
+                                    scheduled_tasks[self.view_instance.allowed_user_id].cancel()
+
+                                afternoon_msg = await user.send(
+                                    f"✅ Sẵn sàng chấm công chiều lúc {target_time.strftime('%H:%M')}:",
+                                    view=CancelAfternoonView(self.view_instance.allowed_user_id)
+                                )
+
+                                async def afternoon_job():
+                                    try:
+                                        await asyncio.sleep(delay)
+                                        user = await bot.fetch_user(self.view_instance.allowed_user_id)
+                                        await user.send("⏰ Đã hết giờ hãy cút khỏi công ty! Tự động chấm công...")
+                                        await run_login_task()
+                                        
+                                        try:
+                                            await afternoon_msg.delete()
+                                        except Exception:
+                                            pass
+
+                                        if self.view_instance.allowed_user_id in scheduled_tasks:
+                                            del scheduled_tasks[self.view_instance.allowed_user_id]
+                                    except asyncio.CancelledError:
+                                        pass
+
+                                task = asyncio.create_task(afternoon_job())
+                                scheduled_tasks[self.view_instance.allowed_user_id] = task
+                        except asyncio.CancelledError:
+                            pass
+                        except Exception as e:
+                            logger.error(f"Lỗi khi chạy hẹn giờ chấm công: {e}")
+
+                    self.view_instance.timer_task = asyncio.create_task(delayed_checkin())
+
             class RunLoginView(discord.ui.View):
                 def __init__(self, allowed_user_id: int, timeout: int = 60 * 30):
                     super().__init__(timeout=timeout)
@@ -322,85 +406,13 @@ async def daily_task():
                             task = asyncio.create_task(afternoon_job())
                             scheduled_tasks[self.allowed_user_id] = task
 
-                @discord.ui.button(label="Hẹn giờ 30 phút", style=discord.ButtonStyle.secondary, emoji="⏰", row=0)
+                @discord.ui.button(label="Hẹn giờ x phút", style=discord.ButtonStyle.secondary, emoji="⏰", row=0)
                 async def timer_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-                    # Only allow the specified user to click
                     if self.allowed_user_id and interaction.user.id != self.allowed_user_id:
                         await interaction.response.send_message("Bạn không có quyền thực hiện hành động này.", ephemeral=True)
                         return
 
-                    # Cancel existing timer if any
-                    if self.timer_task and not self.timer_task.done():
-                        self.timer_task.cancel()
-                        await interaction.response.send_message("❌ Đã hủy hẹn giờ trước đó. Bắt đầu hẹn giờ mới 30 phút...", ephemeral=True)
-                    else:
-                        await interaction.response.send_message("⏰ Đã đặt hẹn giờ 30 phút. Sẽ tự động chấm công sau 30 phút...", ephemeral=True)
-
-                    # Disable buttons to prevent double-click
-                    for item in self.children:
-                        item.disabled = True
-                    try:
-                        # Edit the original message to disable the button
-                        await interaction.message.edit(view=self)
-                    except Exception:
-                        pass
-
-                    # Create async task for delayed execution
-                    async def delayed_checkin():
-                        try:
-                            await asyncio.sleep(SETTIMER * 60)  # 30 minutes in seconds
-                            user = await bot.fetch_user(self.allowed_user_id)
-                            await user.send("⏰ Đã hết 30 phút! Bắt đầu chấm công...")
-                            await run_login_task()
-                            
-                            # After morning check-in, show afternoon automatic check-in option
-                            now = datetime.now(VN_TZ)
-                            target_time = now.replace(
-                                hour=CHECKIN_CONFIG["AFTERNOON_NOTIFY"].hour, 
-                                minute=CHECKIN_CONFIG["AFTERNOON_NOTIFY"].minute, 
-                                second=0, 
-                                microsecond=0
-                            )
-                            if target_time > now:
-                                delay = (target_time - now).total_seconds()
-                                
-                                # Cancel existing task if any
-                                if self.allowed_user_id in scheduled_tasks:
-                                    scheduled_tasks[self.allowed_user_id].cancel()
-
-                                # Send message with afternoon check-in option
-                                afternoon_msg = await user.send(
-                                    f"✅ Sẵn sàng chấm công chiều lúc {target_time.strftime('%H:%M')}:",
-                                    view=CancelAfternoonView(self.allowed_user_id)
-                                )
-
-                                async def afternoon_job():
-                                    try:
-                                        await asyncio.sleep(delay)
-                                        user = await bot.fetch_user(self.allowed_user_id)
-                                        await user.send("⏰ Đã hết giờ hãy cút khỏi công ty! Tự động chấm công...")
-                                        await run_login_task()
-                                        
-                                        # Delete the cancel message when done
-                                        try:
-                                            await afternoon_msg.delete()
-                                        except Exception:
-                                            pass
-
-                                        if self.allowed_user_id in scheduled_tasks:
-                                            del scheduled_tasks[self.allowed_user_id]
-                                    except asyncio.CancelledError:
-                                        pass
-
-                                task = asyncio.create_task(afternoon_job())
-                                scheduled_tasks[self.allowed_user_id] = task
-                        except asyncio.CancelledError:
-                            pass
-                        except Exception as e:
-                            logger.error(f"Lỗi khi chạy hẹn giờ chấm công: {e}")
-
-                    # Start the timer task
-                    self.timer_task = asyncio.create_task(delayed_checkin())
+                    await interaction.response.send_modal(TimerModal(self))
 
             view = RunLoginView(USER_ID)
             await user.send("Đã đến giờ chấm công. Nhấn nút bên dưới để bắt đầu:", view=view)
@@ -561,4 +573,18 @@ async def on_message(message):
                 await message.channel.send(file=discord.File(response.get('images', None)))
                 return
             response = tool_others.format_discord_message(response)
-            await message.channel.send(response)
+            
+            # Check if we should respond with voice (if user sent audio)
+            if audio_paths:
+                voice_file = f"downloads/cache/voice_reply_{message.id}.mp3"
+                await asyncio.to_thread(
+                    text2speech.run, 
+                    voice_file,
+                    response
+                )
+                if os.path.exists(voice_file):
+                    await message.channel.send(response, file=discord.File(voice_file))
+                else:
+                    await message.channel.send(response)
+            else:
+                await message.channel.send(response)
