@@ -1,5 +1,6 @@
 import modules.config as config
 import modules.tools.tool_generate as tool_generate
+import modules.tools.tool_expense as tool_expense
 import modules.core.call_api_llm as call_api_llm
 import json
 
@@ -17,7 +18,7 @@ def smart_agent_decision(user_message: str):
     system_prompt = "Căn cứ vào ngữ cảnh cũng như là yêu cầu của người dùng để chọn tools phù hợp"
     message = [{'role': 'system', 'content': system_prompt},
                {'role': 'user', 'content': user_message['content']}]
-    tools = call_api_llm.call_chat_api(model=config.MODEL_NAME_G, messages=message, tools=[tool_call.calculus_tool, tool_call.search_web_tool, tool_call.url_search_tool, tool_call.generate_image_tools])
+    tools = call_api_llm.call_chat_api(model=config.MODEL_NAME_G, messages=message, tools=[tool_call.calculus_tool, tool_call.search_web_tool, tool_call.url_search_tool, tool_call.generate_image_tools, tool_expense.expense_tool_def])
     tools = tools.json()['choices'][0]
     print(tools)
     if 'tool_calls' in tools['message']:
@@ -34,14 +35,17 @@ def smart_agent_decision(user_message: str):
             elif tool['function']['name'] == 'search_web':
                 args = json.loads(tool['function']['arguments'])
                 contexts = tool_call.web_search(query=args['query'])
-                # print(contexts, type(contexts))
-                # context_ = [f"Title: {context['title']}, Description: {context['url']}, Url: {context['url']}" for context in contexts]
                 context_ = contexts[1]
             elif tool['function']['name'] == 'url_search':
                 contexts = tool_call.web_crawl_data(url_doc=tool['function']['arguments']['url'])
                 context_ = '\n'.join([f"Source: {doc.metadata.get('source')}, Title: {doc.metadata.get('title')}, Language: {doc.metadata.get('language', 'None')}, Page_content: {clean_excessive_newlines(doc.page_content)}" for doc in contexts])
             elif tool['function']['name'] == 'generate_image':
                 return tool_generate.call_api_gennerate_image(tool['function']['arguments'])
+            elif tool['function']['name'] == 'expense_tracker':
+                args = json.loads(tool['function']['arguments'])
+                context_ = tool_expense.handle_expense_tool(
+                    args=args
+                )
         
         user_message = [{"role": "assistant", "content": f"Kết quả sau khi dùng tools: {context_}"}, user_message]
         
