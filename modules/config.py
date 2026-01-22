@@ -11,7 +11,7 @@ MODEL_NAME_EMBED = ""
 # "qwen3:1.7b"
 # "gemma3:12b-it-qat"
 CONFIG_CHARACTOR = r"bots\config\Hana.json"
-# r"bots\config\Yumi.json"
+# r"bots\config\Yumi.json" 
 # r"bots\config\Hana.json"
 if not os.path.exists(DOWNLOAD_FOLDER):
     os.makedirs(DOWNLOAD_FOLDER)

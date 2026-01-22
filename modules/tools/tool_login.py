@@ -62,11 +62,21 @@ def login_and_click(
         wait.until(EC.url_changes(old_url))
         print("Đăng nhập thành công, URL:", driver.current_url)
 
-        # Chọn chức năng theo style
-        target_text = convert_command.get(style, "Lịch sử")
-        print("Click vào:", target_text)
 
-        button = wait.until(EC.element_to_be_clickable((By.XPATH, f"//button[span[text()='{target_text}']]")))
+        # Chọn chức năng theo style, chờ nút hiện lên và có thể click
+        target_text = convert_command.get(style, "Lịch sử")
+        print("Chờ nút xuất hiện:", target_text)
+        try:
+            button = wait.until(
+                EC.element_to_be_clickable((By.XPATH, f"//button[span[text()='{target_text}']]"))
+            )
+        except Exception as e:
+            # Nếu timeout, thử tìm lại với timeout dài hơn (mạng yếu)
+            print(f"Chưa thấy nút '{target_text}', thử lại với timeout dài hơn...")
+            wait_long = WebDriverWait(driver, 30)
+            button = wait_long.until(
+                EC.element_to_be_clickable((By.XPATH, f"//button[span[text()='{target_text}']]"))
+            )
         driver.execute_script("arguments[0].scrollIntoView(true);", button)
         button.click()
 

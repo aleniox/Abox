@@ -306,7 +306,7 @@ async def daily_task():
                     self.view_instance.timer_task = asyncio.create_task(delayed_checkin())
 
             class RunLoginView(discord.ui.View):
-                def __init__(self, allowed_user_id: int, timeout: int = 60 * 30):
+                def __init__(self, allowed_user_id: int, timeout: int = 60 * 120):
                     super().__init__(timeout=timeout)
                     self.allowed_user_id = allowed_user_id
                     self.timer_task = None
