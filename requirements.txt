@@ -1,21 +1,16 @@
 discord.py
-# ollama
-youtube_search
+# youtube_search
 # chromadb
-sentence_transformers
+# sentence_transformers
 SpeechRecognition
-whisperx==3.3.2
-duckduckgo_search
-google-genai
+# whisperx==3.3.2
+# duckduckgo_search
+# google-genai
 python-dotenv
 pillow
 selenium
 webdriver-manager
-langchain_community
+# langchain_community
 pydub
 peft
 langchain_ollama
-
-# .\llamacpp\llama-mtmd-cli.exe -m {text_model}.gguf --mmproj mmproj.gguf --image your_image.jpg
-
-# apt-get install -y libnss3 libdbus-glib-1-2 libasound2t64 libdrm2g

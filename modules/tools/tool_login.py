@@ -62,13 +62,45 @@ def login_and_click(
         wait.until(EC.url_changes(old_url))
         print("Đăng nhập thành công, URL:", driver.current_url)
 
-        # Chọn chức năng theo style
+        # Chọn chức năng theo style, kiểm tra nút đã hiển thị trước khi click
         target_text = convert_command.get(style, "Lịch sử")
-        print("Click vào:", target_text)
-
-        button = wait.until(EC.element_to_be_clickable((By.XPATH, f"//button[span[text()='{target_text}']]")))
-        driver.execute_script("arguments[0].scrollIntoView(true);", button)
-        button.click()
+        print("Chờ nút xuất hiện:", target_text)
+        
+        xpath = f"//button[span[text()='{target_text}']]"
+        retry_count = 0
+        max_retries = 3
+        
+        while retry_count < max_retries:
+            try:
+                # Chờ nút xuất hiện
+                button = wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
+                print(f"✓ Nút '{target_text}' đã xuất hiện")
+                
+                # Chờ nút hiển thị (visible)
+                button = wait.until(EC.visibility_of_element_located((By.XPATH, xpath)))
+                print(f"✓ Nút '{target_text}' đã hiển thị")
+                
+                # Chờ nút có thể click
+                button = wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
+                print(f"✓ Nút '{target_text}' đã sẵn sàng click")
+                
+                # Scroll vào view
+                driver.execute_script("arguments[0].scrollIntoView(true);", button)
+                time.sleep(1)  # Chờ animation scroll xong
+                
+                # Click
+                button.click()
+                print(f"✓ Đã click nút '{target_text}'")
+                break
+                
+            except Exception as e:
+                retry_count += 1
+                if retry_count < max_retries:
+                    print(f"⚠️ Lần {retry_count} thất bại: {type(e).__name__}. Thử lại...")
+                    time.sleep(2)
+                else:
+                    print(f"❌ Sau {max_retries} lần thử, nút '{target_text}' vẫn không hiển thị")
+                    raise Exception(f"Không thể tìm hoặc click nút '{target_text}'") from e
 
         time.sleep(2)
         driver.save_screenshot(output)

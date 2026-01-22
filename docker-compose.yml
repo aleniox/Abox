@@ -33,13 +33,37 @@ services:
       - C:\Users\ADMIN\Downloads\blackbox:/app  # Chỉ dùng khi dev, nếu production nên bỏ
     environment:
       - PYTHONUNBUFFERED=1
-      # - OLLAMA_API_URLCORE=http://ollama-gpu-zero:11434/api/chat
-      # - OLLAMA_API_URLCHAT=http://ollama-gpu-two:11434/api/chat
-    # extra_hosts:
-    #   - "host.docker.internal:host-gateway"
     # depends_on:
-    #   - ollama-gpu-zero
-      # - ollama-gpu-three
+    #   - qwen3vl-server
+
+  qwen3vl-server:
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda
+    container_name: qwen3vl-server
+    ports:
+      - "8070:8070"
+    restart: unless-stopped
+    volumes:
+      - C:\Users\ADMIN\Downloads\blackbox\weights:/models
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+    runtime: nvidia
+    command: >
+      -m models/Qwen3VL-8B-Instruct-Q4_K_M.gguf
+      -c 5000
+      --host 0.0.0.0
+      --port 8070
+      --n-gpu-layers 36
+      --jinja
+      --mmproj models/mmproj-Qwen3VL-8B-Instruct-Q8_0.gguf
+      --parallel 1
+      -b 4096
+      -ub 4096
 
 # volumes:
 #   ollama-data-gpu-zero:

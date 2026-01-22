@@ -8,11 +8,11 @@ import modules.config as config
 from typing import Optional
 
 # from pyannote.audio import Pipeline
-from transformers import pipeline, WhisperProcessor, AutoModelForSpeechSeq2Seq
-from peft import PeftModel, PeftConfig
+# from transformers import pipeline, WhisperProcessor, AutoModelForSpeechSeq2Seq
+# from peft import PeftModel, PeftConfig
 from pydub import AudioSegment
 import os
-import torch
+# import torch
 
 logger = logging.getLogger(__name__)
 
@@ -55,20 +55,20 @@ def transcribe_audio(audio_path: str, language: str = "vi-VN") -> Optional[str]:
     
     return None
 
-def transcribe_audio_with_whisperx(audio_path: str, language: str = "vi") -> Optional[str]:
-    """Chuyển đổi audio thành văn bản bằng Faster Whisper"""
-    import whisperx
-    model = whisperx.load_model("weights/speech2text", "cuda", compute_type="int8")
+# def transcribe_audio_with_whisperx(audio_path: str, language: str = "vi") -> Optional[str]:
+#     """Chuyển đổi audio thành văn bản bằng Faster Whisper"""
+#     import whisperx
+#     model = whisperx.load_model("weights/speech2text", "cuda", compute_type="int8")
 
-    try:
-        audio = whisperx.load_audio(audio_path)
-        segments = model.transcribe(audio, batch_size=8, language=language)
-        text = " ".join([segment["text"] for segment in segments["segments"]])
-        return text
-    except Exception as e:
-        logger.error(f"Faster Whisper transcription error: {e}")
+#     try:
+#         audio = whisperx.load_audio(audio_path)
+#         segments = model.transcribe(audio, batch_size=8, language=language)
+#         text = " ".join([segment["text"] for segment in segments["segments"]])
+#         return text
+#     except Exception as e:
+#         logger.error(f"Faster Whisper transcription error: {e}")
     
-    return None
+#     return None
 
 def process_voice_message(audio_paths: list, temp_dir: str = "temp_audio") -> Optional[str]:
     """Xử lý tin nhắn thoại: chuyển đổi -> nhận dạng"""
@@ -96,35 +96,35 @@ def transcribe_api_whisper(audio_paths: str):
         text += response.json()["transcription"]
     return text.strip() if text else None
 
-def model_init_speech2text(adapter_model = "viv3-large-lora/checkpoint-3000/adapter_model"):
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
-    # === Load model ===
-    peft_config = PeftConfig.from_pretrained(adapter_model)
-    model = AutoModelForSpeechSeq2Seq.from_pretrained(
-        peft_config.base_model_name_or_path,
-        torch_dtype=torch_dtype,
-        device_map=device,
-    )
-    model.generation_config.language = "<|vi|>"
-    model.generation_config.task = "transcribe"
-    model.config.forced_decoder_ids = None
-    model = PeftModel.from_pretrained(model, adapter_model)
+# def model_init_speech2text(adapter_model = "viv3-large-lora/checkpoint-3000/adapter_model"):
+#     device = "cuda" if torch.cuda.is_available() else "cpu"
+#     torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+#     # === Load model ===
+#     peft_config = PeftConfig.from_pretrained(adapter_model)
+#     model = AutoModelForSpeechSeq2Seq.from_pretrained(
+#         peft_config.base_model_name_or_path,
+#         torch_dtype=torch_dtype,
+#         device_map=device,
+#     )
+#     model.generation_config.language = "<|vi|>"
+#     model.generation_config.task = "transcribe"
+#     model.config.forced_decoder_ids = None
+#     model = PeftModel.from_pretrained(model, adapter_model)
     
-    processor = WhisperProcessor.from_pretrained(peft_config.base_model_name_or_path, language="vi", task="transcribe")
+#     processor = WhisperProcessor.from_pretrained(peft_config.base_model_name_or_path, language="vi", task="transcribe")
 
-    asr_pipe = pipeline(
-        "automatic-speech-recognition",
-        model=model,
-        tokenizer=processor.tokenizer,
-        feature_extractor=processor.feature_extractor,
-        torch_dtype=torch_dtype,
+#     asr_pipe = pipeline(
+#         "automatic-speech-recognition",
+#         model=model,
+#         tokenizer=processor.tokenizer,
+#         feature_extractor=processor.feature_extractor,
+#         torch_dtype=torch_dtype,
         
-        # device=device,
-    )
-    return asr_pipe
+#         # device=device,
+#     )
+#     return asr_pipe
 
-def infer_s2t(audio_path, asr_pipe):
-    result = asr_pipe(audio_path, return_timestamps=True)
-    # print(result["text"])
-    return result["text"]
+# def infer_s2t(audio_path, asr_pipe):
+#     result = asr_pipe(audio_path, return_timestamps=True)
+#     # print(result["text"])
+#     return result["text"]

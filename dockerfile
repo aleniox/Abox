@@ -32,5 +32,8 @@ RUN pip install -r requirements.txt
 # Copy toàn bộ mã nguồn vào container
 COPY . /app/
 
+# Cài đặt Chrome từ file deb có sẵn
+RUN apt-get update && apt-get install -y /app/data/google-chrome-stable_current_amd64.deb
+
 EXPOSE 5000
 CMD ["python3", "main.py"]
