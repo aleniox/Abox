@@ -37,7 +37,7 @@ services:
     #   - qwen3vl-server
 
   qwen3vl-server:
-    image: ghcr.io/ggml-org/llama.cpp:server-cuda
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda-b7717
     container_name: qwen3vl-server
     ports:
       - "8070:8070"

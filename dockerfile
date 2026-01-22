@@ -7,8 +7,8 @@ RUN apt-get update && apt-get install -y \
     python3 \
     ffmpeg \
     python3-pip \
-    tesseract-ocr \
-    tesseract-ocr-vie \
+    # tesseract-ocr \
+    # tesseract-ocr-vie \
     && rm -rf /var/lib/apt/lists/*
 # Thiết lập thư mục làm việc trong container
 
