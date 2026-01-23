@@ -54,13 +54,13 @@ services:
               capabilities: [gpu]
     runtime: nvidia
     command: >
-      -m models/Qwen3VL-8B-Instruct-Q4_K_M.gguf
+      -m /models/Qwen3VL-8B-Instruct-Q4_K_M.gguf
       -c 5000
       --host 0.0.0.0
       --port 8070
       --n-gpu-layers 36
       --jinja
-      --mmproj models/mmproj-Qwen3VL-8B-Instruct-Q8_0.gguf
+      --mmproj /models/mmproj-Qwen3VL-8B-Instruct-Q8_0.gguf
       --parallel 1
       -b 4096
       -ub 4096

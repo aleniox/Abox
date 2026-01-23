@@ -1,16 +1,18 @@
 discord.py
-# youtube_search
+youtube_search
 # chromadb
 # sentence_transformers
 SpeechRecognition
 # whisperx==3.3.2
-# duckduckgo_search
-# google-genai
+duckduckgo-search
+google-genai
 python-dotenv
 pillow
 selenium
 webdriver-manager
-# langchain_community
+langchain-community
 pydub
 peft
-langchain_ollama
+langchain-ollama
+
+
