@@ -13,6 +13,16 @@ webdriver-manager
 langchain-community
 pydub
 peft
-langchain-ollama
+scipy
+tqdm
+transformers
+soundfile
+# langchain-ollama
+requests
+sounddevice
+numpy
+pytz
+huggingface-hub
 
 
+# uv pip install scipy

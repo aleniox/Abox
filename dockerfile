@@ -22,12 +22,8 @@ ENV PATH="/opt/venv/bin:$PATH"
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:$PATH"
 
-# Cài đặt các thư viện từ requirements.txt (dùng PyPI mirror Aliyun)
-RUN uv pip install \
-    --index-url https://mirrors.aliyun.com/pypi/simple \
-    --extra-index-url https://pypi.org/simple \
-    --no-cache-dir \
-    -r requirements.txt
+# Cài đặt các thư viện từ requirements.txt
+RUN UV_HTTP_TIMEOUT=300 uv pip install --no-cache-dir -r requirements.txt
 
 # Copy toàn bộ mã nguồn vào container (TRƯỚC khi install Chrome)
 COPY . /app/

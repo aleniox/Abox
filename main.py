@@ -1,6 +1,7 @@
 import bots.my_bot as my_bot
 import asyncio
 import logging
+import time
 # import modules.core.agent_chat as agent_chat
 
 
@@ -30,6 +31,21 @@ def main():
         logger.info("Bot has shut down.")
 
 if __name__ == "__main__":
-    main()
+    max_retries = 5
+    retry_count = 0
+    retry_delay = 5
     
-# chatbot.aipt.vn
+    while retry_count < max_retries:
+        try:
+            main()
+            break  # Nếu main() hoàn thành bình thường, thoát
+        except Exception as e:
+            retry_count += 1
+            logger.error(f"Bot crashed: {e}")
+            logger.info(f"Retry {retry_count}/{max_retries} after {retry_delay}s...")
+            time.sleep(retry_delay)
+            retry_delay = min(retry_delay * 2, 60)  # Tăng delay lên 2x nhưng max 60s
+    
+    if retry_count >= max_retries:
+        logger.critical(f"Bot failed after {max_retries} retries. Exiting.")
+        exit(1)
