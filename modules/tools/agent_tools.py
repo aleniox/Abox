@@ -19,7 +19,8 @@ def smart_agent_decision(user_message: str):
     message = [{'role': 'system', 'content': system_prompt},
                {'role': 'user', 'content': user_message['content']}]
     tools = call_api_llm.call_chat_api(model=config.MODEL_NAME_G, messages=message, tools=[tool_call.calculus_tool, tool_call.search_web_tool, tool_call.url_search_tool, tool_call.generate_image_tools, tool_expense.expense_tool_def])
-    tools = tools.json()['choices'][0]
+    tools_json = tools.json()
+    tools = tools_json.get('choices', [{}])[0] if 'choices' in tools_json else tools_json
     print(tools)
     if 'tool_calls' in tools['message']:
         print(tools['message']['tool_calls'])
@@ -42,7 +43,7 @@ def smart_agent_decision(user_message: str):
             elif tool['function']['name'] == 'generate_image':
                 return tool_generate.call_api_gennerate_image(tool['function']['arguments'])
             elif tool['function']['name'] == 'expense_tracker':
-                args = json.loads(tool['function']['arguments'])
+                args = json.loads(tool['function']['arguments']) if isinstance(tool['function']['arguments'], str) else tool['function']['arguments']
                 context_ = tool_expense.handle_expense_tool(
                     args=args
                 )

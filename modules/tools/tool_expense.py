@@ -1,8 +1,10 @@
 import json
 import os
 from datetime import datetime
+import pandas as pd
 
 EXPENSE_FILE = "data/expenses.json"
+EXPENSE_XLSX_FILE = "data/expenses.xlsx"
 
 def load_expenses():
     if not os.path.exists(EXPENSE_FILE):
@@ -17,6 +19,12 @@ def save_expenses(expenses):
     os.makedirs(os.path.dirname(EXPENSE_FILE), exist_ok=True)
     with open(EXPENSE_FILE, 'w', encoding='utf-8') as f:
         json.dump(expenses, f, ensure_ascii=False, indent=2)
+    save_expenses_to_xlsx(expenses)
+
+def save_expenses_to_xlsx(expenses):
+    os.makedirs(os.path.dirname(EXPENSE_XLSX_FILE), exist_ok=True)
+    df = pd.DataFrame(expenses)
+    df.to_excel(EXPENSE_XLSX_FILE, index=False, encoding='utf-8')
 
 def add_expense(amount, category, description, date=None):
     expenses = load_expenses()
@@ -40,7 +48,7 @@ def add_expense(amount, category, description, date=None):
 
 def get_expenses_report(filter_date=None, filter_category=None):
     expenses = load_expenses()
-    report = "📊 **Báo cáo chi tiêu:**\n"
+    report = "📊 **Báo cáo chi tiêu hàng ngày:**\n"
     total = 0
     filtered_expenses = []
 
@@ -66,7 +74,7 @@ expense_tool_def = {
     "type": "function",
     "function": {
         "name": "expense_tracker",
-        "description": "Quản lý chi tiêu cá nhân: thêm khoản chi hoặc xem thống kê chi tiêu.",
+        "description": "Quản lý chi tiêu cá nhân: thêm khoản chi hoặc xem thống kê chi tiêu hàng ngày. ví dụ: mua thịt hết 200k, xem báo cáo chi tiêu hôm nay, mua xăng 500k ...",
         "parameters": {
             "type": "object",
             "required": ["action"],
@@ -98,15 +106,19 @@ expense_tool_def = {
 }
 
 def handle_expense_tool(args):
-    action=args.get('action'),
-    amount=args.get('amount'),
-    category=args.get('category'),
-    description=args.get('description'),
-    date=args.get('date')
+    action = args.get('action')
+    amount = args.get('amount')
+    category = args.get('category')
+    description = args.get('description')
+    date = args.get('date')
+
     if action == "add":
         if amount is None:
             return "Vui lòng cung cấp số tiền."
         return add_expense(amount, category or "Khác", description or "", date)
     elif action == "report":
+        # Default to today's date for daily report
+        if not date:
+            date = datetime.now().strftime("%Y-%m-%d")
         return get_expenses_report(date, category)
     return "Hành động không hợp lệ"
