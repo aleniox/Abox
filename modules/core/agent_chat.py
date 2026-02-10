@@ -88,7 +88,7 @@ def chat(message: str = "", image_path: Optional[List[str]] = None, audio_path: 
     # Xử lý danh sách ảnh nếu có
     valid_images = []
     if image_path:
-        MODEL_NAME = config.MODEL_NAME_T
+        MODEL_NAME = config.MODEL_NAME_G
         for img in image_path:
             if os.path.isfile(img):
                 valid_images.append(str(img))

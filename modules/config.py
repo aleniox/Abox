@@ -5,7 +5,7 @@ DATA_FOLDER = "data/simple_memory"
 ALLOWED_EXTENSIONS = {"txt", "pdf", "png", "jpg", "jpeg", "gif"}
 MODEL_NAME_G = "qwen3:4b-instruct-2507-q4_K_M"
 MAX_TOKEN_CHAT = 2048
-OLLAMA_API_URLCHAT = "http://192.168.1.199:8070/v1/chat/completions"
+OLLAMA_API_URLCHAT = "http://10.0.99.116:8070/v1/chat/completions"
 TOKENIZE = "Qwen/Qwen3-30B-A3B-Instruct-2507-FP8"
 # CONFIG_CHARACTOR = r"bots\config\Hana.json"
 
