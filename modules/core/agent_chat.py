@@ -66,6 +66,7 @@ HISTORY_CHAT = HISTORY_CHAT + LOAD_HISTORY
 def process_and_accumulate_stream(response_stream):
     full_response = ""
     for line in response_stream.iter_lines():
+        print(line)
         try:
             # print(line[5:])
             if line:
@@ -125,12 +126,14 @@ def chat(message: str = "", image_path: Optional[List[str]] = None, audio_path: 
 
     response = ""
     stream = call_api_llm.call_chat_api(model=MODEL_NAME, messages=messages,
-                         stream=True, 
+                         stream=False, 
                         #  options={"num_ctx": 10000}
                          )
-    for chunk in process_and_accumulate_stream(stream):
-        # print(chunk)
-        response = chunk
+    print(stream.json())
+    response = stream.json().get("message", {}).get("content", "") if "choices" not in stream.json() else stream.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+    # for chunk in process_and_accumulate_stream(stream):
+    #     # print(chunk)
+    #     response = chunk
         # content = chunk.get("message", {}).get("content", "")
         # if content:
         #     print(content, end="", flush=True)
@@ -139,7 +142,7 @@ def chat(message: str = "", image_path: Optional[List[str]] = None, audio_path: 
     # Cập nhật lịch sử chat
     # response = response.replace("<think>", "").replace("</think>", "")
     import modules.tools.tool_others as tool_others
-    response = tool_others.remove_think_content(response)
+    # response = tool_others.remove_think_content(response)
     assistant_message = {"role": "assistant", "content": response.strip()}
     # vector_history.add_message(session_id, assistant_message)
     HISTORY_CHAT.extend([user_message, assistant_message])
