@@ -121,9 +121,8 @@ def chat(message: str = "", image_path: Optional[List[str]] = None, audio_path: 
         return {"images": agent_message} 
     
     # print(HISTORY_CHAT +  agent_message)
-    messages = memory.trim_history(HISTORY_CHAT + agent_message)
-    # print(messages)
-    # messages = vector_history.get_recent_history(0000, limit=50)
+    messages = [agent_message[0],{"role": "system", "content": prompt_system}, agent_message[-1]]
+
     response = ""
     stream = call_api_llm.call_chat_api(model=MODEL_NAME, messages=messages,
                          stream=True, 

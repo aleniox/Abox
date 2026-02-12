@@ -1,7 +1,7 @@
 import os
 
 DOWNLOAD_FOLDER = "downloads"
-DATA_FOLDER = "data/simple_memory"
+DATA_FOLDER = "storage/data/history"
 ALLOWED_EXTENSIONS = {"txt", "pdf", "png", "jpg", "jpeg", "gif"}
 MODEL_NAME_G = "qwen3:4b-instruct-2507-q4_K_M"
 MAX_TOKEN_CHAT = 2048

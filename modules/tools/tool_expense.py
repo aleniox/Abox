@@ -2,7 +2,7 @@ import json
 import os
 from datetime import datetime
 
-EXPENSE_FILE = "data/expenses.json"
+EXPENSE_FILE = "storage/finance/expenses.json"
 
 def load_expenses():
     if not os.path.exists(EXPENSE_FILE):
@@ -62,6 +62,25 @@ def get_expenses_report(filter_date=None, filter_category=None):
         return "Không tìm thấy chi tiêu nào phù hợp."
     return report
 
+def compare_market_price(item_name):
+    from modules.tools.tool_searchs import web_search
+    query = f"giá {item_name} thị trường mới nhất"
+    try:
+        results, text = web_search(query, max_results=2)
+        print("Market Price Search Results:", results, text)
+        if not results:
+            return ""
+        
+        market_info = f"\n\n🔍 **Thông tin giá thị trường tham khảo cho '{item_name}':**\n"
+        # Lấy vắn tắt description từ kết quả tìm kiếm
+        summary = "\n".join([f"- {r['title']}: {r['description']}..." for r in results[:2]])
+        market_info += summary
+        return market_info
+    except:
+        import traceback
+        traceback.print_exc()
+        return ""
+
 expense_tool_def = {
     "type": "function",
     "function": {
@@ -78,7 +97,7 @@ expense_tool_def = {
                 },
                 "amount": {
                     "type": "number",
-                    "description": "Số tiền chi tiêu (bắt buộc khi action='add')"
+                    "description": "Số tiền chi tiêu (bắt buộc khi action='add') tiền đơn vị VNĐ"
                 },
                 "category": {
                     "type": "string",
@@ -86,7 +105,7 @@ expense_tool_def = {
                 },
                 "description": {
                     "type": "string",
-                    "description": "Mô tả chi tiết (dùng cho add)"
+                    "description": "Mô tả chi tiết hoặc tên sản phẩm (VD: trứng, sữa, xăng...) (dùng cho add)"
                 },
                 "date": {
                     "type": "string",
@@ -98,15 +117,24 @@ expense_tool_def = {
 }
 
 def handle_expense_tool(args):
-    action=args.get('action'),
-    amount=args.get('amount'),
-    category=args.get('category'),
-    description=args.get('description'),
-    date=args.get('date')
+    action=args.get('action', None)
+    amount=args.get('amount', None)
+    category=args.get('category', None)
+    description=args.get('description', None)
+    date=args.get('date', None)
+    # print(action, amount, category, description, date)
     if action == "add":
         if amount is None:
             return "Vui lòng cung cấp số tiền."
-        return add_expense(amount, category or "Khác", description or "", date)
+        result = add_expense(amount, category or "Khác", description or "", date)
+        
+        # Nếu có mô tả sản phẩm, thực hiện tìm kiếm giá thị trường để đính kèm vào phản hồi
+        search_query = description or category
+        if search_query and search_query.lower() != "khác":
+            market_price_info = compare_market_price(search_query)
+            result += market_price_info
+        print("Expense Tool Result:", result)
+        return result
     elif action == "report":
         return get_expenses_report(date, category)
     return "Hành động không hợp lệ"

@@ -70,7 +70,7 @@ def transcribe_audio(audio_path: str, language: str = "vi-VN") -> Optional[str]:
     
 #     return None
 
-def process_voice_message(audio_paths: list, temp_dir: str = "temp_audio") -> Optional[str]:
+def process_voice_message(audio_paths: list, temp_dir: str = "storage/temp_audio") -> Optional[str]:
     """Xử lý tin nhắn thoại: chuyển đổi -> nhận dạng"""
     # Bước 1: Chuyển đổi sang WAV
     output_text = ""

@@ -4,7 +4,7 @@ youtube_search
 # sentence_transformers
 SpeechRecognition
 # whisperx==3.3.2
-duckduckgo-search
+ddgs
 google-genai
 python-dotenv
 pillow
@@ -23,6 +23,6 @@ sounddevice
 numpy
 pytz
 huggingface-hub
-
+beautifulsoup4
 
 # uv pip install scipy

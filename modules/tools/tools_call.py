@@ -1,6 +1,6 @@
-from duckduckgo_search import DDGS
+# from duckduckgo_search import DDGS
 from langchain_community.document_loaders import WebBaseLoader
-from duckduckgo_search.exceptions import DuckDuckGoSearchException
+# from duckduckgo_search.exceptions import DuckDuckGoSearchException
 from sympy import symbols, diff, integrate, sin, cos, exp, sqrt, N
 from sympy.parsing.sympy_parser import parse_expr
 
@@ -25,28 +25,28 @@ search_web_tool = {
 }
 
 
-def search_with_ddgs(query, max_results=5):
-    try:
-        with DDGS() as ddgs:
-            return ddgs.text(query, region="vn-vi", max_results=max_results)
-    except DuckDuckGoSearchException as e:
-        print(f"Lỗi: {e}")
+# def search_with_ddgs(query, max_results=5):
+#     try:
+#         with DDGS() as ddgs:
+#             return ddgs.text(query, region="vn-vi", max_results=max_results)
+#     except DuckDuckGoSearchException as e:
+#         print(f"Lỗi: {e}")
 # Ví dụ
 
 
-def web_search(query, max_results=5):
-    # loader = WebBaseLoader(query, max_results=max_results)
-    # return loader.load()
-    results = []
-    text = ""
-    for result in search_with_ddgs(query, max_results=max_results):
-        results.append({
-            "title": result['title'],
-            "url": result['href'],
-            "description": result['body']
-        })
-        text += f"Title: {result['title']}\nURL: {result['href']}\nDescription: {result['body']}\n\n"
-    return results, text
+# def web_search(query, max_results=5):
+#     # loader = WebBaseLoader(query, max_results=max_results)
+#     # return loader.load()
+#     results = []
+#     text = ""
+#     for result in search_with_ddgs(query, max_results=max_results):
+#         results.append({
+#             "title": result['title'],
+#             "url": result['href'],
+#             "description": result['body']
+#         })
+#         text += f"Title: {result['title']}\nURL: {result['href']}\nDescription: {result['body']}\n\n"
+#     return results, text
 
 url_search_tool = {
     'type': 'function',
@@ -67,17 +67,17 @@ url_search_tool = {
     }
 }
 
-def web_crawl_data(url_doc):
-    if isinstance(url_doc, str):
-        url_doc = [url_doc]
-    loader = WebBaseLoader(
-        web_paths=url_doc,
-        requests_kwargs={
-            'timeout': 10,  # 10 seconds timeout
-        })
+# def web_crawl_data(url_doc):
+#     if isinstance(url_doc, str):
+#         url_doc = [url_doc]
+#     loader = WebBaseLoader(
+#         web_paths=url_doc,
+#         requests_kwargs={
+#             'timeout': 10,  # 10 seconds timeout
+#         })
 
-    document_to_compare = loader.load()
-    return document_to_compare
+#     document_to_compare = loader.load()
+#     return document_to_compare
 
 calculus_tool = {
     "type": "function",

@@ -15,12 +15,17 @@ def clean_excessive_newlines(text):
 
 def smart_agent_decision(user_message: str):
     import modules.tools.tools_call as tool_call
-    system_prompt = "Căn cứ vào ngữ cảnh cũng như là yêu cầu của người dùng để chọn tools phù hợp"
+    from datetime import datetime
+    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    system_prompt = f"Thời gian hiện tại: {current_time}. Căn cứ vào ngữ cảnh cũng như là yêu cầu của người dùng để chọn tools phù hợp"
     message = [{'role': 'system', 'content': system_prompt},
                {'role': 'user', 'content': user_message['content']}]
-    tools = call_api_llm.call_chat_api(model=config.MODEL_NAME_G, messages=message, tools=[tool_call.calculus_tool, tool_call.search_web_tool, tool_call.url_search_tool, tool_call.generate_image_tools, tool_expense.expense_tool_def])
+    tools = call_api_llm.call_chat_api(model=config.MODEL_NAME_G, messages=message, tools=[tool_call.calculus_tool, 
+                                                                                           tool_call.search_web_tool, 
+                                                                                           tool_call.url_search_tool, 
+                                                                                           tool_call.generate_image_tools, 
+                                                                                           tool_expense.expense_tool_def])
     tools = tools.json()['choices'][0]
-    print(tools)
     if 'tool_calls' in tools['message']:
         print(tools['message']['tool_calls'])
         for tool in tools['message']['tool_calls']:
