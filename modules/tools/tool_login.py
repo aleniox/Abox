@@ -16,8 +16,8 @@ convert_command = {
 }
 
 def login_and_click(
-    host="http://192.168.1.2:3012/login",
-    username="",
+    host="http://10.0.99.101:3012/login",
+    username="0867660302",
     password="aipt2024",
     output="downloads/cache/screenshot.png",
     style="ls"
@@ -63,7 +63,7 @@ def login_and_click(
         print("Đăng nhập thành công, URL:", driver.current_url)
 
         # Chọn chức năng theo style, kiểm tra nút đã hiển thị trước khi click
-        target_text = convert_command.get(style, "Lịch sử")
+        target_text = convert_command.get("ls", "Lịch sử")
         print("Chờ nút xuất hiện:", target_text)
         
         xpath = f"//button[span[text()='{target_text}']]"
@@ -103,6 +103,48 @@ def login_and_click(
                     raise Exception(f"Không thể tìm hoặc click nút '{target_text}'") from e
 
         time.sleep(2)
+        print(f"\nMã nguồn của trang '{target_text}':\n")
+        
+        # Check if already clocked in today
+        today_str = time.strftime("%d-%m-%Y") # e.g. 25-02-2026
+        rows = driver.find_elements(By.CSS_SELECTOR, "tr.ant-table-row")
+        already_clocked_in = False
+        
+        print(f"➜ Kiểm tra trạng thái chấm công cho ngày {today_str}...")
+        
+        for row in rows:
+            cells = row.find_elements(By.TAG_NAME, "td")
+            if len(cells) >= 5:
+                # Cấu trúc bảng: 0=Lần, 1=Thời gian, 2=PVR, 3=Kiểu, 4=Trạng thái
+                time_info = cells[1].text
+                status_info = cells[4].text.strip()
+                if today_str in time_info and "Vào" in status_info:
+                    already_clocked_in = True
+                    print(f"✓ Đã chấm công vào lúc: {time_info}")
+                    break
+        
+        if already_clocked_in:
+            print("➜ Đã chấm công vào rồi. Kết thúc quá trình.")
+        else:
+            print("➜ Chưa tìm thấy bản ghi chấm công vào. Đang quay lại để chấm công...")
+            # Quay lại dashboard
+            driver.back()
+            time.sleep(3)
+            
+            # Click nút Chấm công
+            cc_text = convert_command.get(style, "Lịch sử")
+            cc_xpath = f"//button[span[text()='{cc_text}']]"
+            try:
+                cc_button = wait.until(EC.element_to_be_clickable((By.XPATH, cc_xpath)))
+                # Scroll vào view cho chắc chắn
+                driver.execute_script("arguments[0].scrollIntoView(true);", cc_button)
+                time.sleep(1)
+                cc_button.click()
+                print(f"✓ Đã click nút '{cc_text}' thành công.")
+                time.sleep(2)
+            except Exception as e:
+                print(f"❌ Không thể click nút '{cc_text}': {e}")
+
         driver.save_screenshot(output)
         print("Đã thao tác xong và lưu screenshot:", output)
 
