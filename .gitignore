@@ -12,3 +12,4 @@ TEST
 .env
 output_segments
 data
+.vscode

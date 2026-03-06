@@ -121,15 +121,22 @@ def login_and_click(
                 if today_str in time_info and "Vào" in status_info:
                     already_clocked_in = True
                     print(f"✓ Đã chấm công vào lúc: {time_info}")
-                    break
+                    # break
         
-        if already_clocked_in:
+        if not already_clocked_in:
             print("➜ Đã chấm công vào rồi. Kết thúc quá trình.")
         else:
             print("➜ Chưa tìm thấy bản ghi chấm công vào. Đang quay lại để chấm công...")
-            # Quay lại dashboard
-            driver.back()
-            time.sleep(3)
+            # Click nút Quay lại
+            try:
+                back_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[span[text()='Quay lại']]")))
+                back_button.click()
+                print("✓ Đã click nút 'Quay lại' thành công")
+                time.sleep(3)
+            except Exception as e:
+                print(f"⚠️ Cảnh báo: Không thể click nút 'Quay lại', dùng driver.back(): {e}")
+                driver.back()
+                time.sleep(3)
             
             # Click nút Chấm công
             cc_text = convert_command.get(style, "Lịch sử")
