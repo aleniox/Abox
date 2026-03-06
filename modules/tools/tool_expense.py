@@ -24,7 +24,7 @@ def save_expenses(expenses):
 def save_expenses_to_xlsx(expenses):
     os.makedirs(os.path.dirname(EXPENSE_XLSX_FILE), exist_ok=True)
     df = pd.DataFrame(expenses)
-    df.to_excel(EXPENSE_XLSX_FILE, index=False, encoding='utf-8')
+    df.to_excel(EXPENSE_XLSX_FILE, index=False)
 
 def add_expense(amount, category, description, date=None):
     expenses = load_expenses()
