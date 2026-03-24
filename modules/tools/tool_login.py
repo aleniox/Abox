@@ -123,7 +123,7 @@ def login_and_click(
                     print(f"✓ Đã chấm công vào lúc: {time_info}")
                     # break
         
-        if not already_clocked_in:
+        if already_clocked_in:
             print("➜ Đã chấm công vào rồi. Kết thúc quá trình.")
         else:
             print("➜ Chưa tìm thấy bản ghi chấm công vào. Đang quay lại để chấm công...")

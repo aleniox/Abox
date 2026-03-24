@@ -55,20 +55,20 @@ def transcribe_audio(audio_path: str, language: str = "vi-VN") -> Optional[str]:
     
     return None
 
-# def transcribe_audio_with_whisperx(audio_path: str, language: str = "vi") -> Optional[str]:
-#     """Chuyển đổi audio thành văn bản bằng Faster Whisper"""
-#     import whisperx
-#     model = whisperx.load_model("weights/speech2text", "cuda", compute_type="int8")
+def transcribe_audio_with_whisperx(audio_path: str, language: str = "vi") -> Optional[str]:
+    """Chuyển đổi audio thành văn bản bằng Faster Whisper"""
+    import whisperx
+    model = whisperx.load_model("weights/speech2text", "cuda", compute_type="int8")
 
-#     try:
-#         audio = whisperx.load_audio(audio_path)
-#         segments = model.transcribe(audio, batch_size=8, language=language)
-#         text = " ".join([segment["text"] for segment in segments["segments"]])
-#         return text
-#     except Exception as e:
-#         logger.error(f"Faster Whisper transcription error: {e}")
+    try:
+        audio = whisperx.load_audio(audio_path)
+        segments = model.transcribe(audio, batch_size=8, language=language)
+        text = " ".join([segment["text"] for segment in segments["segments"]])
+        return text
+    except Exception as e:
+        logger.error(f"Faster Whisper transcription error: {e}")
     
-#     return None
+    return None
 
 def process_voice_message(audio_paths: list, temp_dir: str = "storage/temp_audio") -> Optional[str]:
     """Xử lý tin nhắn thoại: chuyển đổi -> nhận dạng"""
