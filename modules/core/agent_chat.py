@@ -2,6 +2,7 @@
 # import time
 import os
 import logging
+import base64
 from typing import Optional, List, Dict
 import modules.memory as memory
 import modules.core.speech2text as speech2text
@@ -10,8 +11,6 @@ import modules.config as config
 import modules.core.call_api_llm as call_api_llm
 import json
 
-
-
 # --- Cấu hình logging ---
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s - %(levelname)s - %(message)s", encoding="utf-8")
@@ -19,6 +18,10 @@ logger = logging.getLogger("llm_chain")
 
 # --- Cấu hình model và prompt ---
 MODEL_NAME = config.MODEL_NAME_G
+
+def encode_image(image_path):
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode('utf-8')
 
 try:
     # from telegram_.templates import prompt_system
@@ -87,21 +90,33 @@ def chat(message: str = "", image_path: Optional[List[str]] = None, audio_path: 
     # vector_history.add_message(session_id, user_message)
     print(f"🗨️ Tin nhắn: {user_message['content']}")
     # Xử lý danh sách ảnh nếu có
-    valid_images = []
+    has_images = False
     if image_path:
-        MODEL_NAME = config.MODEL_NAME_G
-        for img in image_path:
+        # Nếu image_path là list thì dùng luôn, nếu là string thì bọc vào list
+        images_to_process = image_path if isinstance(image_path, list) else [image_path]
+        
+        content_items = [{"type": "text", "text": message or ""}]
+        
+        for img in images_to_process:
             if os.path.isfile(img):
-                valid_images.append(str(img))
-                logger.info(f"🖼️ Đã thêm ảnh: {img}")
+                base64_image = encode_image(img)
+                content_items.append({
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/jpeg;base64,{base64_image}"
+                    }
+                })
+                has_images = True
+                logger.info(f"🖼️ Đã thêm và mã hóa ảnh: {img}")
             else:
                 logger.warning(f"⚠️ Ảnh không tồn tại: {img}")
-        if valid_images:
-            user_message["images"] = valid_images
+        
+        if has_images:
+            user_message["content"] = content_items
+            
     elif audio_path:
         # Xử lý tin nhắn thoại nếu có
         text = speech2text.process_voice_message(audio_path)
-        # text = speech2text.transcribe_api_whisper(audio_path)
         if text:
             user_message["content"] = text
             logger.info(
@@ -111,7 +126,16 @@ def chat(message: str = "", image_path: Optional[List[str]] = None, audio_path: 
             return "⚠️ Không thể chuyển đổi tin nhắn thoại."
 
     # Nếu không có nội dung và cũng không có ảnh hợp lệ
-    if not user_message["content"] and "images" not in user_message:
+    # check if content is list (vision) or string
+    content_is_empty = False
+    if isinstance(user_message["content"], str):
+        if not user_message["content"]:
+            content_is_empty = True
+    elif isinstance(user_message["content"], list):
+        if len(user_message["content"]) == 0:
+            content_is_empty = True
+            
+    if content_is_empty and not has_images:
         return "⚠️ Vui lòng cung cấp văn bản hoặc ít nhất một ảnh hợp lệ."
 
     agent_message = agent_tools.smart_agent_decision(user_message)
@@ -119,10 +143,17 @@ def chat(message: str = "", image_path: Optional[List[str]] = None, audio_path: 
     print(f"🗨️ Tin nhắn sau khi xử lý: {agent_message}")
     
     if isinstance(agent_message, str):
-        return {"images": agent_message} 
+        return agent_message 
     
-    # print(HISTORY_CHAT +  agent_message)
-    messages = [agent_message[0],{"role": "system", "content": prompt_system}, agent_message[-1]]
+    # Ở đây chúng ta tạo danh sách messages để gửi LLM
+    # Nếu là tin nhắn có hình ảnh (content là list), ta ưu tiên gửi trực tiếp
+    # vì smart_agent_decision có thể chưa hỗ trợ tốt tool calling cho vision 100%
+    
+    if has_images:
+        messages = [{"role": "system", "content": prompt_system}, user_message]
+    else:
+        # Nếu không có ảnh, dùng logic cũ (công cộng các bước tool call nếu có)
+        messages = [agent_message[0], {"role": "system", "content": prompt_system}, agent_message[-1]]
 
     response = ""
     stream = call_api_llm.call_chat_api(model=MODEL_NAME, messages=messages,
