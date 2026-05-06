@@ -121,15 +121,24 @@ async def checkin_and_out(ctx, style: str = 'ls'):
                     await ctx.channel.send(f"⚠️ **Bỏ qua:** Dòng #{i+1} (`{host}`). Thiếu Host/User/Pass.")
                     continue
                     
-                image_path = tool_login.login_and_click(
+                result = await asyncio.to_thread(
+                    tool_login.login_and_click,
                     host=row[0], 
                     username=row[1], 
                     password=row[2], 
                     style=style
                 )
                 
-                # Thành công
-                await ctx.channel.send(f"✅ Host `{host}`: **Thành công.**", file=discord.File(image_path))
+                # Xử lý kết quả trả về (có thể là string đường dẫn ảnh hoặc dict chứa message)
+                image_path = result
+                msg_content = f"✅ Host `{host}`: **Thành công.**"
+                
+                if isinstance(result, dict):
+                    image_path = result.get("screenshot")
+                    if result.get("message"):
+                        msg_content += f"\n{result['message']}"
+                
+                await ctx.channel.send(msg_content, file=discord.File(image_path))
 
             except Exception as e:
                 # Lỗi chung
@@ -154,14 +163,24 @@ async def run_login_task():
                 if len(row) < 3:
                     await user.send(f"⚠️ **Bỏ qua:** Dòng #{i+1} (`{host}`). Thiếu Host/User/Pass.")
                     continue
-                image_path = await asyncio.to_thread(
+                result = await asyncio.to_thread(
                     tool_login.login_and_click,
                     host=row[0], 
                     username=row[1], 
                     password=row[2], 
                     style=TASK_STYLE
                 )
-                await user.send(f"✅ Host `{host}`: **Thành công.**", file=discord.File(image_path))
+                
+                # Xử lý kết quả trả về
+                image_path = result
+                msg_content = f"✅ Host `{host}`: **Thành công.**"
+                
+                if isinstance(result, dict):
+                    image_path = result.get("screenshot")
+                    if result.get("message"):
+                        msg_content += f"\n{result['message']}"
+
+                await user.send(msg_content, file=discord.File(image_path))
             except Exception as e:
                 # Lỗi chung
                 import traceback

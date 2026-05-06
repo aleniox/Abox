@@ -37,6 +37,16 @@ def login_and_click(
 
     # Tạo thư mục user-data-dir tạm (tránh lỗi trùng session)
     user_data_dir = tempfile.mkdtemp()
+    
+    # Dọn dẹp các thư mục tạm cũ nếu hệ thống vừa crash/tắt đột ngột
+    try:
+        temp_root = tempfile.gettempdir()
+        for item in os.listdir(temp_root):
+            if item.startswith("tmpxxxx"): # Có thể tinh chỉnh pattern
+                pass # Logic dọn dẹp bổ sung nếu cần
+    except:
+        pass
+
     options.add_argument(f"--user-data-dir={user_data_dir}")
 
     # Nếu bạn dùng google-chrome bản deb:
@@ -109,6 +119,7 @@ def login_and_click(
         today_str = time.strftime("%d-%m-%Y") # e.g. 25-02-2026
         rows = driver.find_elements(By.CSS_SELECTOR, "tr.ant-table-row")
         already_clocked_in = False
+        already_clocked_out = False
         
         print(f"➜ Kiểm tra trạng thái chấm công cho ngày {today_str}...")
         
@@ -118,15 +129,38 @@ def login_and_click(
                 # Cấu trúc bảng: 0=Lần, 1=Thời gian, 2=PVR, 3=Kiểu, 4=Trạng thái
                 time_info = cells[1].text
                 status_info = cells[4].text.strip()
-                if today_str in time_info and "Vào" in status_info:
-                    already_clocked_in = True
-                    print(f"✓ Đã chấm công vào lúc: {time_info}")
-                    # break
+                if today_str in time_info:
+                    if "Vào" in status_info:
+                        already_clocked_in = True
+                        print(f"✓ Đã chấm công vào lúc: {time_info}")
+                    elif "Ra" in status_info:
+                        already_clocked_out = True
+                        print(f"✓ Đã chấm công ra lúc: {time_info}")
         
+        current_hour = int(time.strftime("%H"))
+        status_report = ""
+
+        # Logic báo cáo 8h tối (20h)
+        if current_hour >= 20:
+            if not already_clocked_out:
+                status_report = f"⚠️ Cảnh báo: Đã {current_hour}h tối nhưng chưa thấy dữ liệu chấm công RA cho ngày {today_str}!"
+                print(status_report)
+            # Nếu đã có dữ liệu ra rồi thì không gán status_report để không báo gì cả
+
         if already_clocked_in:
-            print("➜ Đã chấm công vào rồi. Kết thúc quá trình.")
+            print("➜ Đã tìm thấy bản ghi chấm công vào.")
+            
+            if current_hour < 12:
+                print(f"➜ Thời gian hiện tại ({current_hour}h) trước 12h trưa. Không click nữa. Kết thúc quá trình.")
+                should_click_clock_in = False
+            else:
+                print(f"➜ Thời gian hiện tại ({current_hour}h) sau 12h trưa. Tiếp tục click chấm công...")
+                should_click_clock_in = True
         else:
             print("➜ Chưa tìm thấy bản ghi chấm công vào. Đang quay lại để chấm công...")
+            should_click_clock_in = True
+        
+        if should_click_clock_in:
             # Click nút Quay lại
             try:
                 back_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[span[text()='Quay lại']]")))
@@ -166,4 +200,7 @@ def login_and_click(
                 # Nếu không thể xóa (vì lý do nào đó), in ra cảnh báo
                 print(f"CẢNH BÁO: Không thể xóa thư mục tạm {user_data_dir}. Lỗi: {e}")
 
+    # Trả về screenshot kèm theo tin nhắn báo cáo nếu có
+    if 'status_report' in locals() and status_report:
+        return {"screenshot": output, "message": status_report}
     return output
