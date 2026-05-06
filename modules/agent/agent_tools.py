@@ -1,4 +1,4 @@
-import modules.config as config
+import modules.config.config as config
 import modules.tools.tool_generate as tool_generate
 import modules.tools.tool_expense as tool_expense
 import modules.core.call_api_llm as call_api_llm
@@ -20,7 +20,7 @@ def smart_agent_decision(user_message: str):
     system_prompt = f"Thời gian hiện tại: {current_time}. Căn cứ vào ngữ cảnh cũng như là yêu cầu của người dùng để chọn tools phù hợp"
     message = [{'role': 'system', 'content': system_prompt},
                {'role': 'user', 'content': user_message['content']}]
-    tools = call_api_llm.call_chat_api(model=config.MODEL_NAME_G, messages=message, tools=[tool_call.calculus_tool, tool_call.search_web_tool, tool_call.url_search_tool, tool_call.generate_image_tools, tool_expense.expense_tool_def])
+    tools = call_api_llm.call_chat_api(model=config.MODEL_NAME, messages=message, tools=[tool_call.calculus_tool, tool_call.search_web_tool, tool_call.url_search_tool, tool_call.generate_image_tools, tool_expense.expense_tool_def])
     tools_json = tools.json()
     tools = tools_json.get('choices', [{}])[0] if 'choices' in tools_json else tools_json
     print(tools)

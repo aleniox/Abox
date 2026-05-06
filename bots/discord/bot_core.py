@@ -6,10 +6,10 @@ from discord.ext import commands
 import logging
 from dotenv import load_dotenv
 
-from bot_config import TOKEN, USER_ID, MAX_RETRIES, RETRY_DELAY
-from commands import setup_commands
-from events import setup_events, get_run_bot_func
-from tasks import setup_daily_task
+from bots.discord.bot_config import TOKEN, USER_ID, MAX_RETRIES, RETRY_DELAY
+from bots.discord.commands import setup_commands
+from bots.discord.events import setup_events, get_run_bot_func
+from bots.discord.tasks import setup_daily_task
 
 # Configure logging
 logging.basicConfig(

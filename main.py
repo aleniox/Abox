@@ -1,4 +1,4 @@
-import bots.my_bot as my_bot
+import bots.discord.my_bot as my_bot
 import asyncio
 import logging
 import time

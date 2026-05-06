@@ -10,10 +10,10 @@ from datetime import datetime
 import os
 from pathlib import Path
 
-from bot_config import CHECKIN_CONFIG, VN_TZ, LOGIN_CSV_PATH, TASK_STYLE, VOICE_CACHE_PATH, USER_ID
+from bots.discord.bot_config import CHECKIN_CONFIG, VN_TZ, LOGIN_CSV_PATH, TASK_STYLE, VOICE_CACHE_PATH, USER_ID
 import modules.tools.tool_login as tool_login
-import modules.tools.tool_others as tool_others
-import modules.core.voice_clone as text2speech
+# import modules.tools.tool_others as tool_others
+# import modules.core.voice_clone as text2speech
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +105,7 @@ def setup_daily_task(bot: discord.Client):
             try:
                 # Send DM with check-in options
                 user = await bot.fetch_user(USER_ID)
-                from views import RunLoginView
+                from bots.discord.views import RunLoginView
                 
                 view = RunLoginView(USER_ID)
                 await user.send("Đã đến giờ chấm công. Nhấn nút bên dưới để bắt đầu:", view=view)
@@ -117,5 +117,6 @@ def setup_daily_task(bot: discord.Client):
         await bot.wait_until_ready()
         print("Daily task started.")
 
-    daily_task.start()
+    # Store task on bot to be started when bot is ready
+    bot.daily_task = daily_task
     return daily_task

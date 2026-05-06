@@ -9,7 +9,7 @@ import asyncio
 import logging
 from pathlib import Path
 
-from views import FormView, RunLoginView
+from bots.discord.views import FormView, RunLoginView
 import modules.tools.tool_login as tool_login
 
 logger = logging.getLogger(__name__)

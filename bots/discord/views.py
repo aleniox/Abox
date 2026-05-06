@@ -4,8 +4,8 @@ Discord UI Views and Buttons
 import discord
 import asyncio
 from datetime import datetime
-from bot_config import CHECKIN_CONFIG, VN_TZ
-from modals import InfoForm, TimerModal
+from bots.discord.bot_config import CHECKIN_CONFIG, VN_TZ
+from bots.discord.modals import InfoForm, TimerModal
 
 
 class FormView(discord.ui.View):
@@ -83,7 +83,7 @@ class RunLoginView(discord.ui.View):
             pass
 
         # Run login task in background
-        from tasks import run_login_task
+        from bots.discord.tasks import run_login_task
         asyncio.create_task(run_login_task(interaction.client))
 
     @discord.ui.button(label="Tự động", style=discord.ButtonStyle.success, emoji="🤖", row=0)
@@ -104,7 +104,7 @@ class RunLoginView(discord.ui.View):
             pass
 
         # Run login task
-        from tasks import run_login_task
+        from bots.discord.tasks import run_login_task
         bot = interaction.client
         asyncio.create_task(run_login_task(bot))
 

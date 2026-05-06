@@ -5,7 +5,7 @@ This is the main entry point for running the Discord bot.
 All functionality has been modularized into separate files for better organization.
 """
 import asyncio
-from bot_core import create_bot, get_run_bot
+from bots.discord.bot_core import create_bot, get_run_bot
 
 # Create the bot with all configurations
 bot = create_bot()

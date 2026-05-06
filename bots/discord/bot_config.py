@@ -4,6 +4,10 @@ Bot configuration and constants
 from datetime import time as dt_time
 import pytz
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Timezone
 VN_TZ = pytz.timezone("Asia/Ho_Chi_Minh")

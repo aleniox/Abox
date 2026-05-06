@@ -89,8 +89,8 @@ class TimerModal(discord.ui.Modal, title="Đặt hẹn giờ"):
             pass
         
         # Import here to avoid circular imports
-        from tasks import run_login_task
-        from bot_config import CHECKIN_CONFIG
+        from bots.discord.tasks import run_login_task
+        from bots.discord.bot_config import CHECKIN_CONFIG
         from datetime import datetime
         import pytz
         VN_TZ = pytz.timezone("Asia/Ho_Chi_Minh")
@@ -114,7 +114,7 @@ class TimerModal(discord.ui.Modal, title="Đặt hẹn giờ"):
                 if target_time > now:
                     delay = (target_time - now).total_seconds()
                     
-                    from views import CancelAfternoonView
+                    from bots.discord.views import CancelAfternoonView
                     
                     if self.view_instance.allowed_user_id in getattr(bot, 'scheduled_tasks', {}):
                         bot.scheduled_tasks[self.view_instance.allowed_user_id].cancel()
