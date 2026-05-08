@@ -1,7 +1,7 @@
 import requests
 import logging
 # from openai import OpenAI
-import modules.config as config
+import modules.config.config as config
 from transformers import AutoTokenizer
 # from langchain_ollama import OllamaEmbeddings
 
@@ -14,11 +14,11 @@ logger = logging.getLogger(__name__)
 
 
 def call_chat_api(messages, 
-                  model=config.MODEL_NAME_G, 
+                  model=config.MODEL_NAME, 
                   stream=False, 
                   tools=None, 
                   max_token=config.MAX_TOKEN_CHAT,
-                  host=config.OLLAMA_API_URLCHAT):
+                  host=config.LLM_API_CHAT):
     payload = {
         "model": model,
         "messages": messages,
@@ -26,7 +26,7 @@ def call_chat_api(messages,
         "options": {
             "num_ctx": max_token,
             "temperature": 0.6,
-            "top_p": 0.8,
+            "top_p": 0.9,
             "top_k": 20,
             "min_p": 0.0,
         },

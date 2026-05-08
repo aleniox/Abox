@@ -4,7 +4,7 @@ import speech_recognition as sr
 from pydub import AudioSegment
 import logging
 import requests
-import modules.config as config
+import modules.config.config as config
 from typing import Optional
 
 # from pyannote.audio import Pipeline
