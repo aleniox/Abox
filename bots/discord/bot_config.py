@@ -32,7 +32,7 @@ CHECKIN_CONFIG = {
 TASK_STYLE = "cc"
 
 # CSV file path
-LOGIN_CSV_PATH = "storage/downloads/cache/login_info.csv"
+LOGIN_CSV_PATH = "storage/cache/login_info.csv"
 VOICE_CACHE_PATH = "storage/downloads/cache/voice_reply_{}.mp3"
 
 # Validation

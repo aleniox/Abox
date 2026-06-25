@@ -28,53 +28,22 @@ def setup_commands(bot: commands.Bot):
         """Command to manually trigger check-in"""
         async with ctx.channel.typing():
             rows = []
+            from bots.discord.bot_config import LOGIN_CSV_PATH
+            from bots.discord.tasks import execute_checkin_for_row
             
             # 1. Read CSV file
             try:
-                with open("storage/cache/login_info.csv", "r", encoding="utf-8") as f:
+                with open(LOGIN_CSV_PATH, "r", encoding="utf-8") as f:
                     rows = list(csv.reader(f))
             except FileNotFoundError:
-                await ctx.channel.send("❌ **Lỗi:** Không tìm thấy tệp `login_info.csv`.")
+                await ctx.channel.send(f"❌ **Lỗi:** Không tìm thấy tệp `{LOGIN_CSV_PATH}`.")
                 return
 
             print(f"Bắt đầu chấm công, style: {style}")
             
             # 2. Process each account
             for i, row in enumerate(rows):
-                host = row[0] if len(row) > 0 else "N/A"
-                
-                try:
-                    # Check if row has at least 3 columns
-                    if len(row) < 3:
-                        await ctx.channel.send(f"⚠️ **Bỏ qua:** Dòng #{i+1} (`{host}`). Thiếu Host/User/Pass.")
-                        continue
-                        
-                    result = await asyncio.to_thread(
-                        tool_login.login_and_click,
-                        host=row[0], 
-                        username=row[1], 
-                        password=row[2], 
-                        style=style
-                    )
-                    
-                    # Process result (can be image path or dict with message)
-                    image_path = result
-                    msg_content = f"✅ Host `{host}`: **Thành công.**"
-                    
-                    if isinstance(result, dict):
-                        image_path = result.get("screenshot")
-                        if result.get("message"):
-                            msg_content += f"\n{result['message']}"
-                    
-                    await ctx.channel.send(msg_content, file=discord.File(image_path))
-
-                except Exception as e:
-                    import traceback
-                    traceback.print_exc()
-                    error_msg = str(e).split('\n')[0]
-                    if len(error_msg) > 150:
-                        error_msg = error_msg[:150] + "..."
-                    # await ctx.channel.send(f"❌ Host `{host}`: **Lỗi chung.** Chi tiết: `{type(e).__name__}: {error_msg}`")
+                await execute_checkin_for_row(row, i, style, ctx.channel)
 
         # 3. Complete
         await ctx.channel.send("Đã hoàn tất quá trình chấm công.")

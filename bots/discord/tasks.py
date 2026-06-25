@@ -22,6 +22,46 @@ last_sent_time = None
 scheduled_tasks = {}
 
 
+async def execute_checkin_for_row(row, index, style, send_target):
+    """Execute check-in for a single account row and send results to target"""
+    host = row[0] if len(row) > 0 else "N/A"
+    
+    try:
+        # Check if row has at least 3 columns
+        if len(row) < 3:
+            await send_target.send(f"⚠️ **Bỏ qua:** Dòng #{index+1} (`{host}`). Thiếu Host/User/Pass.")
+            return False
+        
+        result = await asyncio.to_thread(
+            tool_login.login_and_click,
+            host=row[0], 
+            username=row[1], 
+            password=row[2], 
+            style=style
+        )
+        
+        # Process result
+        image_path = result
+        msg_content = f"✅ Host `{host}`: **Thành công.**"
+        
+        if isinstance(result, dict):
+            image_path = result.get("screenshot")
+            if result.get("message"):
+                msg_content += f"\n{result['message']}"
+
+        await send_target.send(msg_content, file=discord.File(image_path))
+        return True
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        error_msg = str(e).split('\n')[0]
+        if len(error_msg) > 150:
+            error_msg = error_msg[:150] + "..."
+        await send_target.send(f"❌ Host `{host}`: **Lỗi chung.** Chi tiết: `{type(e).__name__}: {error_msg}`")
+        return False
+
+
 async def run_login_task(bot: discord.Client):
     """Execute login and check-in for all accounts"""
     global last_sent_time
@@ -37,42 +77,7 @@ async def run_login_task(bot: discord.Client):
         return
     
     for i, row in enumerate(rows):
-        host = row[0] if len(row) > 0 else "N/A"
-        
-        try:
-            # Check if row has at least 3 columns
-            if len(row) < 3:
-                await user.send(f"⚠️ **Bỏ qua:** Dòng #{i+1} (`{host}`). Thiếu Host/User/Pass.")
-                continue
-            
-            result = await asyncio.to_thread(
-                tool_login.login_and_click,
-                host=row[0], 
-                username=row[1], 
-                password=row[2], 
-                style=TASK_STYLE
-            )
-            
-            # Process result
-            image_path = result
-            msg_content = f"✅ Host `{host}`: **Thành công.**"
-            
-            if isinstance(result, dict):
-                image_path = result.get("screenshot")
-                if result.get("message"):
-                    msg_content += f"\n{result['message']}"
-
-            await user.send(msg_content, file=discord.File(image_path))
-            
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            error_msg = str(e).split('\n')[0]
-            if len(error_msg) > 150:
-                error_msg = error_msg[:150] + "..."
-            await user.send(f"Có cái nịt")
-            
-            # await user.send(f"❌ Host `{host}`: **Lỗi chung.** Chi tiết: `{type(e).__name__}: {error_msg}`")
+        await execute_checkin_for_row(row, i, TASK_STYLE, user)
     
     # Update last_sent_time to avoid duplicate notifications this minute
     now = datetime.now(VN_TZ)
