@@ -27,43 +27,14 @@ services:
     image: chatbot-persional-one
     build: .
     ports:
-      - "5000:5000"
+      - "5050:5000"
     restart: unless-stopped
     volumes:
-      - C:\Users\ADMIN\Downloads\blackbox:/app  # Chỉ dùng khi dev, nếu production nên bỏ
+      - .:/app  # Chỉ dùng khi dev, nếu production nên bỏ
     environment:
       - PYTHONUNBUFFERED=1
     # depends_on:
     #   - qwen3vl-server
-
-  qwen3vl-server:
-    image: ghcr.io/ggml-org/llama.cpp:server-cuda-b7717
-    container_name: qwen3vl-server
-    ports:
-      - "8070:8070"
-    restart: unless-stopped
-    volumes:
-      - C:\Users\ADMIN\Downloads\blackbox\weights:/models
-    environment:
-      - CUDA_VISIBLE_DEVICES=0
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              capabilities: [gpu]
-    runtime: nvidia
-    command: >
-      -m /models/Qwen3VL-8B-Instruct-Q4_K_M.gguf
-      -c 5000
-      --host 0.0.0.0
-      --port 8070
-      --n-gpu-layers 36
-      --jinja
-      --mmproj /models/mmproj-Qwen3VL-8B-Instruct-Q8_0.gguf
-      --parallel 1
-      -b 4096
-      -ub 4096
 
 # volumes:
 #   ollama-data-gpu-zero:

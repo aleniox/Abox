@@ -71,7 +71,10 @@ def setup_commands(bot: commands.Bot):
                 except Exception as e:
                     import traceback
                     traceback.print_exc()
-                    await ctx.channel.send(f"❌ Host `{host}`: **Lỗi chung.** Chi tiết: `{type(e).__name__}`")
+                    error_msg = str(e).split('\n')[0]
+                    if len(error_msg) > 150:
+                        error_msg = error_msg[:150] + "..."
+                    # await ctx.channel.send(f"❌ Host `{host}`: **Lỗi chung.** Chi tiết: `{type(e).__name__}: {error_msg}`")
 
         # 3. Complete
         await ctx.channel.send("Đã hoàn tất quá trình chấm công.")

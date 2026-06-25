@@ -67,7 +67,12 @@ async def run_login_task(bot: discord.Client):
         except Exception as e:
             import traceback
             traceback.print_exc()
-            await user.send(f"❌ Host `{host}`: **Lỗi chung.** Chi tiết: `{type(e).__name__}`")
+            error_msg = str(e).split('\n')[0]
+            if len(error_msg) > 150:
+                error_msg = error_msg[:150] + "..."
+            await user.send(f"Có cái nịt")
+            
+            # await user.send(f"❌ Host `{host}`: **Lỗi chung.** Chi tiết: `{type(e).__name__}: {error_msg}`")
     
     # Update last_sent_time to avoid duplicate notifications this minute
     now = datetime.now(VN_TZ)

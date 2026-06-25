@@ -1,4 +1,17 @@
-from playwright.sync_api import sync_playwright
+try:
+    from playwright.sync_api import sync_playwright
+except ImportError:
+    import subprocess
+    import sys
+    print("Không tìm thấy thư viện playwright. Đang tiến hành cài đặt...")
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "playwright"])
+        print("Đang cài đặt trình duyệt Chromium cho Playwright...")
+        subprocess.check_call([sys.executable, "-m", "playwright", "install", "chromium"])
+        from playwright.sync_api import sync_playwright
+    except Exception as e:
+        print(f"Lỗi khi tự động cài đặt playwright: {e}")
+        raise e
 import time
 import os
 from datetime import datetime
@@ -14,7 +27,7 @@ def login_and_click(
     host="http://10.0.99.101:3012/login",
     username="0867660302",
     password="aipt2024",
-    output="downloads/cache/screenshot.png",
+    output="storage/downloads/screenshot.png",
     style="ls"
 ):
     # Đảm bảo thư mục đầu ra tồn tại
@@ -140,7 +153,10 @@ def login_and_click(
                     status_report = f"⚠️ Cảnh báo: Đã {current_hour}h tối nhưng chưa thấy dữ liệu chấm công RA cho ngày {today_str}!"
                     print(status_report)
             
-            if already_clocked_in:
+            if already_clocked_out:
+                print("➜ Hôm nay đã có bản ghi chấm công ra. Kết thúc quá trình.")
+                should_click_clock_in = False
+            elif already_clocked_in:
                 print("➜ Đã tìm thấy bản ghi chấm công vào.")
                 if current_hour < 12:
                     print(f"➜ Thời gian hiện tại ({current_hour}h) trước 12h trưa. Không click nữa. Kết thúc quá trình.")
