@@ -25,11 +25,12 @@ ENV PATH="/root/.local/bin:$PATH"
 # Cài đặt các thư viện từ requirements.txt
 RUN UV_HTTP_TIMEOUT=300 uv pip install --no-cache-dir -r requirements.txt
 
-# Copy toàn bộ mã nguồn vào container (TRƯỚC khi install Chrome)
-COPY . /app/
+# Cài đặt Playwright browser (chromium) và các dependencies hệ thống cần thiết
+RUN playwright install chromium
+RUN playwright install-deps chromium
 
-# Cài đặt Chrome từ file deb có sẵn
-RUN apt-get update && apt-get install -y /app/data/google-chrome-stable_current_amd64.deb && rm -rf /var/lib/apt/lists/*
+# Copy toàn bộ mã nguồn vào container
+COPY . /app/
 
 EXPOSE 5000
 CMD ["python3", "main.py"]

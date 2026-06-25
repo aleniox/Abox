@@ -31,7 +31,7 @@ def setup_commands(bot: commands.Bot):
             
             # 1. Read CSV file
             try:
-                with open("downloads/cache/login_info.csv", "r", encoding="utf-8") as f:
+                with open("storage/cache/login_info.csv", "r", encoding="utf-8") as f:
                     rows = list(csv.reader(f))
             except FileNotFoundError:
                 await ctx.channel.send("❌ **Lỗi:** Không tìm thấy tệp `login_info.csv`.")

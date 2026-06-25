@@ -25,4 +25,5 @@ pytz
 huggingface-hub
 beautifulsoup4
 pandas
+playwright
 # uv pip install scipy
