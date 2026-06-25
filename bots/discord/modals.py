@@ -26,10 +26,10 @@ class InfoForm(discord.ui.Modal, title="Nhập Thông Tin"):
     async def on_submit(self, interaction: discord.Interaction):
         """Handle form submission"""
         # Create directory if it doesn't exist
-        Path("storage/downloads/cache").mkdir(parents=True, exist_ok=True)
+        Path("storage/cache").mkdir(parents=True, exist_ok=True)
         
         # Save to CSV file
-        with open("storage/downloads/cache/login_info.csv", "a", encoding="utf-8", newline="") as f:
+        with open("storage/cache/login_info.csv", "a", encoding="utf-8", newline="") as f:
             writer = csv.writer(f)
             writer.writerow([self.url, self.username, self.password])
         

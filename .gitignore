@@ -16,3 +16,4 @@ data
 storage
 docs
 third_party
+.venv
