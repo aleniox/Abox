@@ -2,6 +2,8 @@ from selenium import webdriver
 import time
 import tempfile
 import os, shutil
+from datetime import datetime
+import pytz
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
@@ -116,7 +118,9 @@ def login_and_click(
         print(f"\nMã nguồn của trang '{target_text}':\n")
         
         # Check if already clocked in today
-        today_str = time.strftime("%d-%m-%Y") # e.g. 25-02-2026
+        tz = pytz.timezone('Asia/Ho_Chi_Minh')
+        now = datetime.now(tz)
+        today_str = now.strftime("%d-%m-%Y") # e.g. 25-02-2026
         rows = driver.find_elements(By.CSS_SELECTOR, "tr.ant-table-row")
         already_clocked_in = False
         already_clocked_out = False
@@ -137,7 +141,7 @@ def login_and_click(
                         already_clocked_out = True
                         print(f"✓ Đã chấm công ra lúc: {time_info}")
         
-        current_hour = int(time.strftime("%H"))
+        current_hour = now.hour
         status_report = ""
 
         # Logic báo cáo 8h tối (20h)
