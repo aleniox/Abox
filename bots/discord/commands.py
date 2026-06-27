@@ -18,20 +18,19 @@ logger = logging.getLogger(__name__)
 def setup_commands(bot: commands.Bot):
     """Register all commands with the bot"""
     
-    @bot.command()
+    @bot.hybrid_command(name="form")
     async def form(ctx):
-        """Command to show form for entering login info"""
+        """Hiện form điền thông tin chấm công"""
         await ctx.send("📋 Bấm vào nút bên dưới để điền form:", view=FormView())
 
-    @bot.command(name="ckin")
+    @bot.hybrid_command(name="ckin")
     async def checkin_and_out(ctx, style: str = 'ls'):
-        """Command to manually trigger check-in"""
+        """Chạy chấm công thủ công"""
         async with ctx.channel.typing():
             rows = []
             from bots.discord.bot_config import LOGIN_CSV_PATH
             from bots.discord.tasks import execute_checkin_for_row
             
-            # 1. Read CSV file
             try:
                 with open(LOGIN_CSV_PATH, "r", encoding="utf-8") as f:
                     rows = list(csv.reader(f))
@@ -41,16 +40,40 @@ def setup_commands(bot: commands.Bot):
 
             print(f"Bắt đầu chấm công, style: {style}")
             
-            # 2. Process each account
             for i, row in enumerate(rows):
                 await execute_checkin_for_row(row, i, style, ctx.channel)
 
-        # 3. Complete
         await ctx.channel.send("Đã hoàn tất quá trình chấm công.")
 
-    @bot.command(name="info")
+    @bot.hybrid_command(name="start")
+    async def start_bot(ctx):
+        """Lưu User ID của bạn để nhận thông báo"""
+        user_id = ctx.author.id
+        env_path = Path(".env")
+
+        lines = env_path.read_text(encoding="utf-8").splitlines()
+        found = False
+        new_lines = []
+        for line in lines:
+            if line.strip().startswith("USER_ID"):
+                new_lines.append(f"USER_ID={user_id}")
+                found = True
+            else:
+                new_lines.append(line)
+        if not found:
+            new_lines.append(f"USER_ID={user_id}")
+        env_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+
+        from dotenv import load_dotenv
+        load_dotenv(override=True)
+        from bots.discord import bot_config
+        bot_config.USER_ID = user_id
+
+        await ctx.send(f"✅ Đã lưu User ID `{user_id}`. Bot sẽ gửi thông báo chấm công đến bạn.")
+
+    @bot.hybrid_command(name="info")
     async def send_info(ctx):
-        """Send bot info message"""
+        """Xem thông tin bot"""
         embed = Embed(
             title=f"🎉 Chào mừng đến với {bot.user.name} Bot",
             description=f"Tôi là trợ lý ảo của {ctx.author.display_name} trên Discord!",

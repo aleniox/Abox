@@ -12,6 +12,7 @@ from pathlib import Path
 
 from bots.discord.bot_config import CHECKIN_CONFIG, VN_TZ, LOGIN_CSV_PATH, TASK_STYLE, VOICE_CACHE_PATH, USER_ID
 import modules.tools.tool_login as tool_login
+import modules.config.config as config
 # import modules.tools.tool_others as tool_others
 # import modules.core.voice_clone as text2speech
 
@@ -130,3 +131,74 @@ def setup_daily_task(bot: discord.Client):
     # Store task on bot to be started when bot is ready
     bot.daily_task = daily_task
     return daily_task
+
+
+def setup_reminder_task(bot: discord.Client):
+    """Setup reminder check task for user schedules"""
+
+    @tasks.loop(minutes=1)
+    async def reminder_check():
+        from modules.tools.tool_schedule import get_due_schedules, delete_schedule
+
+        now = datetime.now(VN_TZ)
+        due = get_due_schedules(now.hour, now.minute)
+
+        for sched in due:
+            if not sched.get("enabled", True):
+                continue
+            try:
+                user = await bot.fetch_user(sched["user_id"])
+            except Exception as e:
+                logger.error(f"Cannot fetch user {sched['user_id']}: {e}")
+                continue
+
+            action = sched.get("action", {})
+            atype = action.get("type", "reminder")
+
+            if atype == "reminder":
+                await user.send(f"⏰ **Nhắc nhở:** {sched['title']}")
+
+            elif atype == "web_scrape":
+                url = action.get("url", "")
+                instruction = action.get("instruction", "Tóm tắt nội dung")
+                await user.send(f"🔄 Đang xử lý lịch **{sched['title']}** — crawl {url}...")
+
+                try:
+                    from modules.tools.tool_searchs import web_crawl_data
+                    from modules.core.call_api_llm import call_chat_api
+                    loop = asyncio.get_running_loop()
+                    docs = await loop.run_in_executor(None, web_crawl_data, [url])
+                    raw_text = " ".join(d.page_content for d in docs)
+                    if len(raw_text) > 8000:
+                        raw_text = raw_text[:8000]
+
+                    summary_prompt = f"{instruction}\n\nNội dung:\n{raw_text}"
+                    resp = call_chat_api(
+                        model=config.MODEL_NAME,
+                        messages=[{"role": "user", "content": summary_prompt}],
+                        stream=False
+                    )
+                    resp_json = resp.json()
+                    summary = ""
+                    if "message" in resp_json:
+                        summary = resp_json["message"].get("content", "")
+                    elif "choices" in resp_json and resp_json["choices"]:
+                        summary = resp_json["choices"][0].get("message", {}).get("content", "")
+
+                    await user.send(f"📊 **Báo cáo {sched['title']}:**\n{summary[:2000]}")
+                except Exception as e:
+                    import traceback
+                    traceback.print_exc()
+                    logger.error(f"Web_scrape error for {sched['title']}: {e}")
+                    await user.send(f"❌ Lỗi khi xử lý {sched['title']}: {str(e)[:200]}")
+
+            if sched.get("type") == "once":
+                delete_schedule(sched["id"])
+
+    @reminder_check.before_loop
+    async def before():
+        await bot.wait_until_ready()
+        print("Reminder check task started.")
+
+    bot.reminder_task = reminder_check
+    return reminder_check

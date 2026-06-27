@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from bots.discord.bot_config import TOKEN, USER_ID, MAX_RETRIES, RETRY_DELAY
 from bots.discord.commands import setup_commands
 from bots.discord.events import setup_events, get_run_bot_func
-from bots.discord.tasks import setup_daily_task
+from bots.discord.tasks import setup_daily_task, setup_reminder_task
 
 # Configure logging
 logging.basicConfig(
@@ -37,6 +37,7 @@ def create_bot() -> commands.Bot:
     setup_commands(bot)
     setup_events(bot, max_retries=MAX_RETRIES, retry_delay=RETRY_DELAY)
     setup_daily_task(bot)
+    setup_reminder_task(bot)
     
     return bot
 

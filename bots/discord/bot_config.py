@@ -24,12 +24,12 @@ SETTIMER = 30
 # Check-in Configuration
 CHECKIN_CONFIG = {
     "MORNING_NOTIFY": dt_time(7, 30),
-    "DEBUG_NOTIFY": dt_time(17, 31),
+    "DEBUG_NOTIFY": dt_time(14, 57),
     "AFTERNOON_NOTIFY": dt_time(17, 31)
 }
 
 # Default task style
-TASK_STYLE = "cc"
+TASK_STYLE = "ls"
 
 # CSV file path
 LOGIN_CSV_PATH = "storage/cache/login_info.csv"

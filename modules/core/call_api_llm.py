@@ -26,11 +26,11 @@ def call_chat_api(messages,
         "options": {
             "num_ctx": max_token,
             "temperature": 0.6,
-            "top_p": 0.9,
-            "top_k": 20,
-            "min_p": 0.0,
+            "top_p": 0.95,
+            "top_k": 64,
         },
-        "tools": tools
+        "tools": tools,
+        "chat_template_kwargs": {"enable_thinking": False},
     }
     response = requests.post(host,
                              json=payload, stream=stream)
