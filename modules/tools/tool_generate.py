@@ -9,7 +9,7 @@ import json
 
 dotenv.load_dotenv()
 
-def call_api_gennerate_image(args, output_image='downloads/cache/gemini-native-image.png'):
+def call_api_generate_image(args, output_image='downloads/cache/gemini-native-image.png'):
 
     if isinstance(args, str):
         args = json.loads(args)

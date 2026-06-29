@@ -120,43 +120,19 @@ def setup_events(bot: commands.Bot, max_retries: int = 5, retry_delay: int = 5):
                     logger.error(f"Error processing message: {e}")
                     import traceback
                     traceback.print_exc()
-                    
-                    if "Failed to connect to Ollama" in str(e):
-                        try:
-                            # Retry after restarting Ollama
-                            response = await loop.run_in_executor(
-                                None,
-                                chat.chat,
-                                message.content or "",
-                                image_paths,
-                                audio_paths
-                            )
-                        except Exception as retry_error:
-                            logger.error(f"Retry failed: {retry_error}")
-                            response = "⚠️ Có lỗi nghiêm trọng xảy ra khi xử lý yêu cầu."
-                    else:
-                        response = "⚠️ Có lỗi xảy ra khi xử lý yêu cầu."
-                        
-                # Handle image responses
+                    response = "⚠️ Có lỗi xảy ra khi xử lý yêu cầu."
+                
+                # Handle image generation responses (text + image file)
                 if isinstance(response, dict):
-                    await message.channel.send(file=discord.File(response.get('images', None)))
+                    text = response.get("text", "")
+                    img_path = response.get("images")
+                    if img_path:
+                        await message.channel.send(text, file=discord.File(img_path))
+                    else:
+                        await message.channel.send(text)
                     return
                 
                 response = tool_others.format_discord_message(response)
-                
-                # Send voice response if user sent audio
-                # if audio_paths:
-                #     voice_file = VOICE_CACHE_PATH.format(message.id)
-                #     await asyncio.to_thread(
-                #         text2speech.run, 
-                #         voice_file,
-                #         response
-                #     )
-                #     if os.path.exists(voice_file):
-                #         await message.channel.send(response, file=discord.File(voice_file))
-                #     else:
-                #         await message.channel.send(response)
-                # else:
                 await message.channel.send(response)
 
 

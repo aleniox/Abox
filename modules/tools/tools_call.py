@@ -1,6 +1,3 @@
-# from duckduckgo_search import DDGS
-from langchain_community.document_loaders import WebBaseLoader
-# from duckduckgo_search.exceptions import DuckDuckGoSearchException
 from sympy import symbols, diff, integrate, sin, cos, exp, sqrt, N
 from sympy.parsing.sympy_parser import parse_expr
 
@@ -17,36 +14,13 @@ search_web_tool = {
                 "query": {
                     "type": "string",
                     "description": "Câu hỏi/từ khóa cần tìm kiếm (ví dụ: 'thời tiết Hà Nội hôm nay', 'giá iPhone 15 mới nhất')",
-                    "minLength": 3  # Đảm bảo query không quá ngắn
+                    "minLength": 3
                 }
             }
         }
     }
 }
 
-
-# def search_with_ddgs(query, max_results=5):
-#     try:
-#         with DDGS() as ddgs:
-#             return ddgs.text(query, region="vn-vi", max_results=max_results)
-#     except DuckDuckGoSearchException as e:
-#         print(f"Lỗi: {e}")
-# Ví dụ
-
-
-# def web_search(query, max_results=5):
-#     # loader = WebBaseLoader(query, max_results=max_results)
-#     # return loader.load()
-#     results = []
-#     text = ""
-#     for result in search_with_ddgs(query, max_results=max_results):
-#         results.append({
-#             "title": result['title'],
-#             "url": result['href'],
-#             "description": result['body']
-#         })
-#         text += f"Title: {result['title']}\nURL: {result['href']}\nDescription: {result['body']}\n\n"
-#     return results, text
 
 url_search_tool = {
     'type': 'function',
@@ -67,17 +41,6 @@ url_search_tool = {
     }
 }
 
-# def web_crawl_data(url_doc):
-#     if isinstance(url_doc, str):
-#         url_doc = [url_doc]
-#     loader = WebBaseLoader(
-#         web_paths=url_doc,
-#         requests_kwargs={
-#             'timeout': 10,  # 10 seconds timeout
-#         })
-
-#     document_to_compare = loader.load()
-#     return document_to_compare
 
 calculus_tool = {
     "type": "function",
@@ -120,25 +83,18 @@ calculus_tool = {
     }
 }
 
+
 def calculus_calculator(
     expression: str,
-    operation: str = "calculate",  # Thêm tùy chọn mặc định
+    operation: str = "calculate",
     variable: str = "x",
     lower_bound: float = None,
     upper_bound: float = None,
-    evaluate: bool = True  # Cho phép tính ra số cụ thể
+    evaluate: bool = True
 ):
-    """
-    Tính toán biểu thức toán học, bao gồm:
-    - Đạo hàm (derivative)
-    - Tích phân (integral)
-    - Tính giá trị số (calculate)
-    """
     try:
-        # Chuẩn hóa biểu thức (thay ^ thành **)
         expr_str = expression.replace("^", "**")
-        
-        # Xử lý theo loại phép toán
+
         if operation == "derivative":
             x = symbols(variable)
             expr = parse_expr(expr_str)
@@ -152,15 +108,16 @@ def calculus_calculator(
                 result = integrate(expr, x)
         elif operation == "calculate":
             expr = parse_expr(expr_str)
-            result = N(expr) if evaluate else expr  # Tính ra số hoặc giữ symbolic
+            result = N(expr) if evaluate else expr
         else:
             return "Lỗi: Phép toán không hỗ trợ. Chọn 'derivative', 'integral', hoặc 'calculate'"
 
         return str(result) if evaluate else f"Biểu thức: {result}"
-    
+
     except Exception as e:
         return f"Lỗi: {str(e)}"
-    
+
+
 generate_image_tools = {
     "type": "function",
     "function": {
@@ -178,6 +135,7 @@ generate_image_tools = {
         }
     }
 }
+
 
 generate_voice_tools = {
     "type": "function",
