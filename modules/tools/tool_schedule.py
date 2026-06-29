@@ -230,12 +230,11 @@ def execute_due_schedules(report_func=_safe_print):
                     messages=[{"role": "user", "content": summary_prompt}],
                     stream=False
                 )
-                resp_json = resp.json()
                 summary = ""
-                if "message" in resp_json:
-                    summary = resp_json["message"].get("content", "")
-                elif "choices" in resp_json and resp_json["choices"]:
-                    summary = resp_json["choices"][0].get("message", {}).get("content", "")
+                if "message" in resp:
+                    summary = resp["message"].get("content", "")
+                elif "choices" in resp and resp["choices"]:
+                    summary = resp["choices"][0].get("message", {}).get("content", "")
 
                 report_func(f"📊 **Báo cáo {sched['title']}:**\n{summary[:2000]}")
                 count += 1

@@ -7,13 +7,6 @@ import requests
 import modules.config.config as config
 from typing import Optional
 
-# from pyannote.audio import Pipeline
-# from transformers import pipeline, WhisperProcessor, AutoModelForSpeechSeq2Seq
-# from peft import PeftModel, PeftConfig
-from pydub import AudioSegment
-import os
-# import torch
-
 logger = logging.getLogger(__name__)
 
 def convert_audio_to_wav(input_path: str, output_dir: str) -> Optional[str]:
@@ -95,36 +88,3 @@ def transcribe_api_whisper(audio_paths: str):
             response = requests.post(config.URL, files={'file': f})
         text += response.json()["transcription"]
     return text.strip() if text else None
-
-# def model_init_speech2text(adapter_model = "viv3-large-lora/checkpoint-3000/adapter_model"):
-#     device = "cuda" if torch.cuda.is_available() else "cpu"
-#     torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
-#     # === Load model ===
-#     peft_config = PeftConfig.from_pretrained(adapter_model)
-#     model = AutoModelForSpeechSeq2Seq.from_pretrained(
-#         peft_config.base_model_name_or_path,
-#         torch_dtype=torch_dtype,
-#         device_map=device,
-#     )
-#     model.generation_config.language = "<|vi|>"
-#     model.generation_config.task = "transcribe"
-#     model.config.forced_decoder_ids = None
-#     model = PeftModel.from_pretrained(model, adapter_model)
-    
-#     processor = WhisperProcessor.from_pretrained(peft_config.base_model_name_or_path, language="vi", task="transcribe")
-
-#     asr_pipe = pipeline(
-#         "automatic-speech-recognition",
-#         model=model,
-#         tokenizer=processor.tokenizer,
-#         feature_extractor=processor.feature_extractor,
-#         torch_dtype=torch_dtype,
-        
-#         # device=device,
-#     )
-#     return asr_pipe
-
-# def infer_s2t(audio_path, asr_pipe):
-#     result = asr_pipe(audio_path, return_timestamps=True)
-#     # print(result["text"])
-#     return result["text"]

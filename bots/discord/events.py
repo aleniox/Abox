@@ -5,16 +5,12 @@ import discord
 from discord.ext import commands
 import logging
 import asyncio
-import os
 from pathlib import Path
 
 import modules.config.config as config
-import modules.chat.chat as chat
 import modules.agent.agent_main as agent_main
 import bots.discord.upload_media as upload_media
 import modules.tools.tool_others as tool_others
-# import modules.core.voice_clone as text2speech
-from bots.discord.bot_config import VOICE_CACHE_PATH
 
 logger = logging.getLogger(__name__)
 connection_retries = 0
@@ -119,11 +115,13 @@ def setup_events(bot: commands.Bot, max_retries: int = 5, retry_delay: int = 5):
                             f"🎤 Nhận được {len(audio_paths)} tin nhắn thoại của {message.author.display_name}."
                         )
                     
-                    # Process through agent (supports schedule tool + normal chat)
+                    # Process through agent (supports schedule tool + normal chat + images)
                     response = agent_main.process_message(
                         message=message.content or "",
                         user_id=message.author.id,
-                        channel=message.channel
+                        channel=message.channel,
+                        image_paths=image_paths,
+                        audio_paths=audio_paths
                     )
 
                 except Exception as e:

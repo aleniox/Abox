@@ -5,7 +5,6 @@ import discord
 import csv
 import asyncio
 import os
-from pathlib import Path
 
 
 class InfoForm(discord.ui.Modal, title="Nhập Thông Tin"):

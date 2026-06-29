@@ -7,14 +7,11 @@ import asyncio
 import csv
 import logging
 from datetime import datetime
-import os
 from pathlib import Path
 
 from bots.discord.bot_config import CHECKIN_CONFIG, VN_TZ, LOGIN_CSV_PATH, TASK_STYLE, VOICE_CACHE_PATH, USER_ID
 import modules.tools.tool_login as tool_login
 import modules.config.config as config
-# import modules.tools.tool_others as tool_others
-# import modules.core.voice_clone as text2speech
 
 logger = logging.getLogger(__name__)
 
@@ -178,12 +175,11 @@ def setup_reminder_task(bot: discord.Client):
                         messages=[{"role": "user", "content": summary_prompt}],
                         stream=False
                     )
-                    resp_json = resp.json()
                     summary = ""
-                    if "message" in resp_json:
-                        summary = resp_json["message"].get("content", "")
-                    elif "choices" in resp_json and resp_json["choices"]:
-                        summary = resp_json["choices"][0].get("message", {}).get("content", "")
+                    if "message" in resp:
+                        summary = resp["message"].get("content", "")
+                    elif "choices" in resp and resp["choices"]:
+                        summary = resp["choices"][0].get("message", {}).get("content", "")
 
                     await user.send(f"📊 **Báo cáo {sched['title']}:**\n{summary[:2000]}")
                 except Exception as e:
