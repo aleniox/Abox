@@ -10,6 +10,7 @@ from pathlib import Path
 
 import modules.config.config as config
 import modules.chat.chat as chat
+import modules.agent.agent_main as agent_main
 import bots.discord.upload_media as upload_media
 import modules.tools.tool_others as tool_others
 # import modules.core.voice_clone as text2speech
@@ -42,6 +43,17 @@ def setup_events(bot: commands.Bot, max_retries: int = 5, retry_delay: int = 5):
         # Start daily task if it exists and is not already running
         if hasattr(bot, 'daily_task') and not bot.daily_task.is_running():
             bot.daily_task.start()
+
+        # Start reminder check task
+        if hasattr(bot, 'reminder_task') and not bot.reminder_task.is_running():
+            bot.reminder_task.start()
+
+        # Sync slash commands to Discord (gợi ý khi gõ /)
+        try:
+            synced = await bot.tree.sync()
+            logger.info(f"Synced {len(synced)} slash command(s): {[c.name for c in synced]}")
+        except Exception as e:
+            logger.error(f"Failed to sync slash commands: {e}")
 
     @bot.event
     async def on_disconnect():
@@ -107,15 +119,13 @@ def setup_events(bot: commands.Bot, max_retries: int = 5, retry_delay: int = 5):
                             f"🎤 Nhận được {len(audio_paths)} tin nhắn thoại của {message.author.display_name}."
                         )
                     
-                    # Call LLM with text and/or images
-                    response = await loop.run_in_executor(
-                        None,
-                        chat.chat,
-                        message.content or "",
-                        image_paths,
-                        audio_paths
+                    # Process through agent (supports schedule tool + normal chat)
+                    response = agent_main.process_message(
+                        message=message.content or "",
+                        user_id=message.author.id,
+                        channel=message.channel
                     )
-                    
+
                 except Exception as e:
                     logger.error(f"Error processing message: {e}")
                     import traceback

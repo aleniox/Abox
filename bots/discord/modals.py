@@ -25,11 +25,13 @@ class InfoForm(discord.ui.Modal, title="Nhập Thông Tin"):
 
     async def on_submit(self, interaction: discord.Interaction):
         """Handle form submission"""
+        from bots.discord.bot_config import LOGIN_CSV_PATH
+        
         # Create directory if it doesn't exist
-        Path("storage/cache").mkdir(parents=True, exist_ok=True)
+        os.makedirs(os.path.dirname(LOGIN_CSV_PATH), exist_ok=True)
         
         # Save to CSV file
-        with open("storage/cache/login_info.csv", "a", encoding="utf-8", newline="") as f:
+        with open(LOGIN_CSV_PATH, "a", encoding="utf-8", newline="") as f:
             writer = csv.writer(f)
             writer.writerow([self.url, self.username, self.password])
         
@@ -68,8 +70,12 @@ class TimerModal(discord.ui.Modal, title="Đặt hẹn giờ"):
             return
 
         # Cancel existing timer if any
-        if self.view_instance.timer_task and not self.view_instance.timer_task.done():
-            self.view_instance.timer_task.cancel()
+        bot = interaction.client
+        timer_key = f"timer_{self.view_instance.allowed_user_id}"
+        existing_task = bot.scheduled_tasks.get(timer_key)
+        
+        if existing_task and not existing_task.done():
+            existing_task.cancel()
             await interaction.response.send_message(
                 f"❌ Đã hủy hẹn giờ trước đó. Bắt đầu hẹn giờ mới {minutes_val} phút...", 
                 ephemeral=True
@@ -98,10 +104,13 @@ class TimerModal(discord.ui.Modal, title="Đặt hẹn giờ"):
         async def delayed_checkin():
             try:
                 await asyncio.sleep(minutes_val * 60)
-                bot = interaction.client
                 user = await bot.fetch_user(self.view_instance.allowed_user_id)
                 await user.send(f"⏰ Đã hết {minutes_val} phút! Bắt đầu chấm công...")
                 await run_login_task(bot)
+                
+                # Clean up timer task from list
+                if bot.scheduled_tasks.get(timer_key) == self.view_instance.timer_task:
+                    del bot.scheduled_tasks[timer_key]
                 
                 # After morning check-in, show afternoon automatic check-in option
                 now = datetime.now(VN_TZ)
@@ -147,3 +156,4 @@ class TimerModal(discord.ui.Modal, title="Đặt hẹn giờ"):
                 pass
 
         self.view_instance.timer_task = asyncio.create_task(delayed_checkin())
+        bot.scheduled_tasks[timer_key] = self.view_instance.timer_task

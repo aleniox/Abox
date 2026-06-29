@@ -1,7 +1,18 @@
 import json
 import os
 from datetime import datetime
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    import subprocess
+    import sys
+    print("Không tìm thấy thư viện pandas. Đang tiến hành cài đặt pandas và openpyxl...")
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "pandas", "openpyxl"])
+        import pandas as pd
+    except Exception as e:
+        print(f"Lỗi khi tự động cài đặt pandas/openpyxl: {e}")
+        raise e
 
 EXPENSE_FILE = "storage/finance/expenses.json"
 EXPENSE_XLSX_FILE = "storage/finance/expenses.xlsx"

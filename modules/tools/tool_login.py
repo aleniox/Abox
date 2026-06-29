@@ -1,4 +1,17 @@
-from playwright.sync_api import sync_playwright
+try:
+    from playwright.sync_api import sync_playwright
+except ImportError:
+    import subprocess
+    import sys
+    print("Không tìm thấy thư viện playwright. Đang tiến hành cài đặt...")
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "playwright"])
+        print("Đang cài đặt trình duyệt Chromium cho Playwright...")
+        subprocess.check_call([sys.executable, "-m", "playwright", "install", "chromium"])
+        from playwright.sync_api import sync_playwright
+    except Exception as e:
+        print(f"Lỗi khi tự động cài đặt playwright: {e}")
+        raise e
 import time
 import os
 from datetime import datetime
@@ -14,7 +27,7 @@ def login_and_click(
     host="http://10.0.99.101:3012/login",
     username="0867660302",
     password="aipt2024",
-    output="downloads/cache/screenshot.png",
+    output="storage/downloads/screenshot.png",
     style="ls"
 ):
     # Đảm bảo thư mục đầu ra tồn tại
@@ -84,7 +97,7 @@ def login_and_click(
                     
                     # Scroll vào view
                     button.scroll_into_view_if_needed()
-                    time.sleep(1)  # Chờ animation scroll xong
+                    page.wait_for_timeout(1000)  # Chờ animation scroll xong
                     
                     button.click()
                     print(f"✓ Đã click nút '{target_text}'")
@@ -93,12 +106,12 @@ def login_and_click(
                     retry_count += 1
                     if retry_count < max_retries:
                         print(f"⚠️ Lần {retry_count} thất bại: {type(e).__name__}. Thử lại...")
-                        time.sleep(2)
+                        page.wait_for_timeout(2000)
                     else:
                         print(f"❌ Sau {max_retries} lần thử, nút '{target_text}' vẫn không hiển thị")
                         raise Exception(f"Không thể tìm hoặc click nút '{target_text}'") from e
             
-            time.sleep(2)
+            page.wait_for_timeout(2000)
             print(f"\nMã nguồn của trang '{target_text}':\n")
             
             # Kiểm tra xem hôm nay đã chấm công chưa
@@ -140,7 +153,10 @@ def login_and_click(
                     status_report = f"⚠️ Cảnh báo: Đã {current_hour}h tối nhưng chưa thấy dữ liệu chấm công RA cho ngày {today_str}!"
                     print(status_report)
             
-            if already_clocked_in:
+            if already_clocked_out:
+                print("➜ Hôm nay đã có bản ghi chấm công ra. Kết thúc quá trình.")
+                should_click_clock_in = False
+            elif already_clocked_in:
                 print("➜ Đã tìm thấy bản ghi chấm công vào.")
                 if current_hour < 12:
                     print(f"➜ Thời gian hiện tại ({current_hour}h) trước 12h trưa. Không click nữa. Kết thúc quá trình.")
@@ -159,11 +175,11 @@ def login_and_click(
                     page.wait_for_selector(back_xpath, state="visible", timeout=5000)
                     page.click(back_xpath)
                     print("✓ Đã click nút 'Quay lại' thành công")
-                    time.sleep(3)
+                    page.wait_for_timeout(3000)
                 except Exception as e:
                     print(f"⚠️ Cảnh báo: Không thể click nút 'Quay lại', dùng page.go_back(): {e}")
                     page.go_back()
-                    time.sleep(3)
+                    page.wait_for_timeout(3000)
                 
                 # Click nút Chấm công hoặc Lịch sử dựa trên style
                 cc_text = convert_command.get(style, "Lịch sử")
@@ -172,10 +188,10 @@ def login_and_click(
                     page.wait_for_selector(cc_xpath, state="visible", timeout=5000)
                     cc_button = page.locator(cc_xpath)
                     cc_button.scroll_into_view_if_needed()
-                    time.sleep(1)
+                    page.wait_for_timeout(1000)
                     cc_button.click()
                     print(f"✓ Đã click nút '{cc_text}' thành công.")
-                    time.sleep(2)
+                    page.wait_for_timeout(2000)
                 except Exception as e:
                     print(f"❌ Không thể click nút '{cc_text}': {e}")
             
