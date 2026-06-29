@@ -44,6 +44,20 @@ def setup_events(bot: commands.Bot, max_retries: int = 5, retry_delay: int = 5):
         if hasattr(bot, 'reminder_task') and not bot.reminder_task.is_running():
             bot.reminder_task.start()
 
+        # Catch-up once schedules missed while offline
+        try:
+            from modules.tools.tool_schedule import get_missed_once_schedules, delete_schedule
+            missed = get_missed_once_schedules(minutes_back=5)
+            for sched in missed:
+                user = await bot.fetch_user(sched["user_id"])
+                atype = sched.get("action", {}).get("type", "reminder")
+                if atype == "reminder":
+                    await user.send(f"⏰ **Nhắc nhở (bù):** {sched['title']}")
+                delete_schedule(sched["id"])
+                logger.info(f"Caught up missed once schedule: {sched['title']}")
+        except Exception as e:
+            logger.error(f"Catch-up schedules error: {e}")
+
         # Sync slash commands to Discord (gợi ý khi gõ /)
         try:
             synced = await bot.tree.sync()

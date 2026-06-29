@@ -188,6 +188,21 @@ def setup_reminder_task(bot: discord.Client):
                     logger.error(f"Web_scrape error for {sched['title']}: {e}")
                     await user.send(f"❌ Lỗi khi xử lý {sched['title']}: {str(e)[:200]}")
 
+            elif atype == "agent_task":
+                prompt = action.get("prompt", sched["title"])
+                await user.send(f"🤖 Đang xử lý tác vụ: **{sched['title']}**...")
+                try:
+                    from modules.agent.agent_main import process_message
+                    result = process_message(prompt, sched["user_id"], channel=None,
+                        task_context="<task_context>Đây là tác vụ tự động theo lịch trình đã định sẵn. BẮT BUỘC dùng công cụ (search_web, url_search) để lấy dữ liệu mới nhất. Sau khi search_web, dùng url_search để đọc nội dung từ các URL có kết quả. Có thể gọi nhiều lần nếu cần. Chỉ output answer khi đã có thông tin cụ thể. KHÔNG hỏi lại người dùng.</task_context>")
+                    text = result["text"] if isinstance(result, dict) else result
+                    await user.send(f"📊 **Báo cáo {sched['title']}:**\n{text[:2000]}")
+                except Exception as e:
+                    import traceback
+                    traceback.print_exc()
+                    logger.error(f"Agent_task error for {sched['title']}: {e}")
+                    await user.send(f"❌ Lỗi khi xử lý {sched['title']}: {str(e)[:200]}")
+
             if sched.get("type") == "once":
                 delete_schedule(sched["id"])
 

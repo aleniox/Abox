@@ -3,7 +3,13 @@ import os
 import uuid
 from datetime import datetime
 
+import pandas as pd
+import pytz
+
+VN_TZ = pytz.timezone("Asia/Ho_Chi_Minh")
+
 SCHEDULE_FILE = "storage/schedules/schedules.json"
+SCHEDULE_XLSX_FILE = "storage/schedules/schedules.xlsx"
 
 PENDING_KEY = "pending_schedule"
 
@@ -24,14 +30,50 @@ def load_schedules():
         return []
 
 
+def save_schedules_to_xlsx(schedules):
+    if not schedules:
+        return
+    try:
+        rows = []
+        for s in schedules:
+            action = s.get("action", {})
+            rows.append({
+                "ID": s["id"],
+                "User ID": s["user_id"],
+                "Tiêu đề": s["title"],
+                "Giờ": f"{int(s['hour']):02d}:{int(s['minute']):02d}",
+                "Loại": "Hàng ngày" if s["type"] == "daily" else "Một lần",
+                "Hành động": "Nhắc nhở" if action.get("type") == "reminder" else "Crawl web" if action.get("type") == "web_scrape" else "Tác vụ tự động",
+                "URL": action.get("url", ""),
+                "Hướng dẫn": action.get("instruction", "") or action.get("prompt", ""),
+                "Kích hoạt": "Có" if s.get("enabled", True) else "Không",
+                "Tạo lúc": s.get("created_at", "")
+            })
+        df = pd.DataFrame(rows)
+        os.makedirs(os.path.dirname(SCHEDULE_XLSX_FILE), exist_ok=True)
+        df.to_excel(SCHEDULE_XLSX_FILE, index=False, sheet_name="Lịch nhắc nhở")
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Loi khi luu Excel: {e}")
+
+
 def save_schedules(schedules):
     _ensure_file()
     with open(SCHEDULE_FILE, "w", encoding="utf-8") as f:
         json.dump(schedules, f, ensure_ascii=False, indent=2)
+    save_schedules_to_xlsx(schedules)
 
 
 def add_schedule(user_id, title, hour, minute, type_, action):
     schedules = load_schedules()
+    try:
+        hour = int(hour)
+    except (TypeError, ValueError):
+        hour = 0
+    try:
+        minute = int(minute)
+    except (TypeError, ValueError):
+        minute = 0
     sched = {
         "id": str(uuid.uuid4()),
         "user_id": user_id,
@@ -41,7 +83,7 @@ def add_schedule(user_id, title, hour, minute, type_, action):
         "type": type_,
         "action": action,
         "enabled": True,
-        "created_at": datetime.now().isoformat()
+        "created_at": datetime.now(VN_TZ).isoformat()
     }
     schedules.append(sched)
     save_schedules(schedules)
@@ -64,58 +106,27 @@ def get_due_schedules(hour, minute):
             if s["enabled"] and s["hour"] == hour and s["minute"] == minute]
 
 
-schedule_tool_def = {
-    "type": "function",
-    "function": {
-        "name": "schedule_reminder",
-        "description": "Quản lý lịch nhắc nhở: thêm, xem, xóa lịch. Khi user yêu cầu thêm lịch, gọi action='add' để parse thông tin. Sau đó show preview và hỏi xác nhận. CHỈ gọi confirm_add khi user đã xác nhận.",
-        "parameters": {
-            "type": "object",
-            "required": ["action", "hour", "minute"],
-            "properties": {
-                "action": {
-                    "type": "string",
-                    "enum": ["add", "confirm_add", "cancel_add", "list", "delete"],
-                    "description": "'add': parse yêu cầu và trả pending\n'confirm_add': lưu schedule đã pending vào file\n'cancel_add': hủy pending\n'list': xem danh sách lịch\n'delete': xóa lịch"
-                },
-                "title": {
-                    "type": "string",
-                    "description": "Tiêu đề lịch nhắc nhở (dùng cho add, confirm_add)"
-                },
-                "hour": {
-                    "type": "integer",
-                    "description": "Giờ (0-23, dùng cho add, confirm_add)"
-                },
-                "minute": {
-                    "type": "integer",
-                    "description": "Phút (0-59, dùng cho add, confirm_add)"
-                },
-                "type": {
-                    "type": "string",
-                    "enum": ["daily", "once"],
-                    "description": "'daily': lặp lại mỗi ngày, 'once': một lần (dùng cho add, confirm_add)"
-                },
-                "action_type": {
-                    "type": "string",
-                    "enum": ["reminder", "web_scrape"],
-                    "description": "'reminder': nhắc nhở text\n'web_scrape': crawl web và báo cáo"
-                },
-                "url": {
-                    "type": "string",
-                    "description": "URL cần crawl (chỉ dùng khi action_type='web_scrape')"
-                },
-                "instruction": {
-                    "type": "string",
-                    "description": "Hướng dẫn tóm tắt nội dung (chỉ dùng khi action_type='web_scrape')"
-                },
-                "schedule_id": {
-                    "type": "string",
-                    "description": "ID lịch cần xóa (dùng cho delete)"
-                }
-            }
-        }
-    }
-}
+def get_missed_once_schedules(minutes_back: int = 5):
+    schedules = load_schedules()
+    now = datetime.now(VN_TZ)
+    missed = []
+    for s in schedules:
+        if not s.get("enabled") or s.get("type") != "once":
+            continue
+        created = s.get("created_at")
+        if not created:
+            continue
+        try:
+            created_dt = datetime.fromisoformat(created)
+            if created_dt.tzinfo is None:
+                created_dt = VN_TZ.localize(created_dt)
+        except Exception:
+            continue
+        sched_time = created_dt.replace(hour=s["hour"], minute=s["minute"], second=0, microsecond=0)
+        diff = (now - sched_time).total_seconds()
+        if 0 <= diff <= minutes_back * 60:
+            missed.append(s)
+    return missed
 
 
 def handle_schedule_tool(args, user_id):
@@ -129,7 +140,8 @@ def handle_schedule_tool(args, user_id):
         atype = args.get("action_type", "reminder")
         url = args.get("url", "")
         instruction = args.get("instruction", "")
-        return f"PARSED | title={title} | hour={hour} | minute={minute} | type={type_} | action_type={atype} | url={url} | instruction={instruction} | pending"
+        prompt = args.get("prompt", "")
+        return f"PARSED | title={title} | hour={hour} | minute={minute} | type={type_} | action_type={atype} | url={url} | instruction={instruction} | prompt={prompt} | pending"
 
     elif action == "confirm_add":
         sched = add_schedule(
@@ -141,10 +153,11 @@ def handle_schedule_tool(args, user_id):
             action={
                 "type": args.get("action_type", "reminder"),
                 "url": args.get("url", ""),
-                "instruction": args.get("instruction", "")
+                "instruction": args.get("instruction", ""),
+                "prompt": args.get("prompt", "")
             }
         )
-        return f"✅ Đã lưu lịch nhắc nhở **{sched['title']}** lúc {sched['hour']:02d}:{sched['minute']:02d} ({sched['type']})."
+        return f"✅ Đã lưu lịch nhắc nhở **{sched['title']}** lúc {sched['hour']:02d}:{sched['minute']:02d} ({sched['type']}). Dữ liệu đã được lưu vào file Excel để tiện theo dõi."
 
     elif action == "cancel_add":
         return "❌ Đã hủy, không lưu lịch nào."
@@ -195,7 +208,7 @@ def execute_due_schedules(report_func=_safe_print):
     report_func: callback nhận text để hiển thị (print cho CLI, send_message cho Discord)
     Trả về số lượng schedule đã xử lý.
     """
-    now = datetime.now()
+    now = datetime.now(VN_TZ)
     due = get_due_schedules(now.hour, now.minute)
     count = 0
 

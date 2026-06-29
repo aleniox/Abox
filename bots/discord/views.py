@@ -3,6 +3,7 @@ Discord UI Views and Buttons
 """
 import discord
 import asyncio
+import os
 from datetime import datetime
 from bots.discord.bot_config import CHECKIN_CONFIG, VN_TZ
 from bots.discord.modals import InfoForm, TimerModal
@@ -159,3 +160,32 @@ class RunLoginView(discord.ui.View):
             return
 
         await interaction.response.send_modal(TimerModal(self))
+
+
+class ShutdownConfirm(discord.ui.View):
+    """View for confirming system shutdown"""
+
+    def __init__(self, ctx):
+        super().__init__(timeout=30)
+        self.ctx = ctx
+        self.confirmed = False
+
+    @discord.ui.button(label="🖥️ Tắt máy", style=discord.ButtonStyle.danger)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message("❌ Bạn không thể xác nhận.", ephemeral=True)
+            return
+        self.confirmed = True
+        await interaction.response.edit_message(content="🖥️ Đang tắt máy sau 10 giây...", view=None)
+        try:
+            os.system("shutdown /s /t 10")
+        except Exception as e:
+            await self.ctx.send(f"❌ Lỗi khi tắt máy: {e}")
+
+    @discord.ui.button(label="Huỷ", style=discord.ButtonStyle.secondary)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.ctx.author.id:
+            await interaction.response.send_message("❌ Bạn không thể huỷ.", ephemeral=True)
+            return
+        self.confirmed = True
+        await interaction.response.edit_message(content="✅ Đã huỷ lệnh tắt máy.", view=None)

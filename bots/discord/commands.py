@@ -6,9 +6,11 @@ from discord.ext import commands
 from discord import Embed, Color
 import csv
 import logging
+import os
 from pathlib import Path
 
-from bots.discord.views import FormView, RunLoginView
+from bots.discord.views import FormView, RunLoginView, ShutdownConfirm
+from bots.discord import bot_config
 
 logger = logging.getLogger(__name__)
 
@@ -83,3 +85,13 @@ def setup_commands(bot: commands.Bot):
         embed.set_footer(text=f"{bot.user.name} Bot © 2025")
         
         await ctx.send(embed=embed)
+
+    @bot.hybrid_command(name="shutdown")
+    async def shutdown_bot(ctx):
+        """Tắt máy tính từ xa"""
+        if ctx.author.id != bot_config.USER_ID:
+            await ctx.send("❌ Bạn không có quyền thực hiện lệnh này.")
+            return
+
+        view = ShutdownConfirm(ctx)
+        await ctx.send("⚠️ **Cảnh báo:** Bạn có chắc muốn tắt máy tính?", view=view)
