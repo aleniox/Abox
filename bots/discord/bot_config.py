@@ -29,7 +29,7 @@ CHECKIN_CONFIG = {
 }
 
 # Default task style
-TASK_STYLE = "ls"
+TASK_STYLE = "cc"
 
 # CSV file path
 LOGIN_CSV_PATH = "storage/cache/login_info.csv"
