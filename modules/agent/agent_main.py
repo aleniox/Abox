@@ -19,26 +19,28 @@ from modules.tools.tool_expense import handle_expense_tool
 logger = logging.getLogger(__name__)
 
 # --- Paths ---
-PERSONALITY_PROMPT_FILE = Path(__file__).parent.parent.parent / "storage" / "prompts" / "personality_prompt.md"
+PROMPT_DIR = Path(__file__).parent.parent.parent / "storage" / "prompts"
+PERSONALITY_PROMPT_FILE = PROMPT_DIR / "personality_prompt.md"
+BRAIN_PROMPT_FILE = PROMPT_DIR / "brain_system.md"
+RESPONDER_INSTRUCTION_FILE = PROMPT_DIR / "responder_instruction.md"
 PROFILE_DIR = Path("storage/profiles")
 PROFILE_DIR.mkdir(parents=True, exist_ok=True)
 
-# --- Personality (dùng cho Responder) ---
-def _load_personality() -> str:
-    if PERSONALITY_PROMPT_FILE.exists():
+# --- Prompt loader ---
+def _load_prompt(file_path: Path, default: str = "") -> str:
+    if file_path.exists():
         try:
-            return PERSONALITY_PROMPT_FILE.read_text(encoding="utf-8")
+            return file_path.read_text(encoding="utf-8").strip()
         except Exception as e:
-            logger.warning(f"Loi doc personality prompt: {e}")
-    return "You are a helpful AI assistant."
+            logger.warning(f"Lỗi đọc prompt {file_path}: {e}")
+    return default
 
-BASE_SYSTEM = _load_personality()
+# --- Personality (dùng cho Responder) ---
+BASE_SYSTEM = _load_prompt(PERSONALITY_PROMPT_FILE, default="You are a helpful AI assistant.")
 
-RESPONDER_INSTRUCTION = """
-
-Ban nhan duoc [BRAIN_RESULT] tu bo nao xu ly tools.
-Nhiet vu: lay [BRAIN_RESULT], viet lai bang giong noi ca tinh cua ban, tra loi truc tiep vao cau hoi cua nguoi dung.
-KHONG hien thi [BRAIN_RESULT] hay [TOOL_RESULT] hay bat ky mark noi bo nao cho user thay."""
+# --- Responder instruction ---
+_responder_content = _load_prompt(RESPONDER_INSTRUCTION_FILE)
+RESPONDER_INSTRUCTION = f"\n\n{_responder_content}" if _responder_content else ""
 
 # --- User profile ---
 def _load_user_profile(user_id: int) -> dict:
@@ -59,100 +61,7 @@ VALID_TOOLS = {
     "url_search", "generate_image", "generate_voice", "expense_tracker"
 }
 
-BRAIN_SYSTEM = """<brain>
-  <mission>
-    Bạn là bộ não xử lý công cụ. Phân tích yêu cầu người dùng, dựa vào ngữ cảnh các hành động đã thực hiện, quyết định hành động tiếp theo.
-    Đầu ra là JSON với cấu trúc: {"input": "", "next_action": "", "reason": "", "parameters": {}}
-    Nếu có <task_context> ở cuối tin nhắn: đây là tác vụ tự động theo lịch trình, KHÔNG phải tin nhắn từ người dùng. BẮT BUỘC dùng công cụ (search_web, url_search) để lấy dữ liệu mới nhất. KHÔNG output answer khi chưa gọi tool nào. KHÔNG hỏi lại người dùng.
-  </mission>
-  <context>
-    Lịch sử các hành động đã thực hiện trong phiên này. Dựa vào đây để quyết định next_action phù hợp.
-  </context>
-  <context_rules>
-    - Nếu ngữ cảnh có entry schedule_reminder với kết quả chứa "pending" và action_type="agent_task" -> confirm_add NGAY, không hỏi
-    - Nếu ngữ cảnh có entry schedule_reminder với kết quả chứa "pending" và người dùng xác nhận (ok/yes/đồng ý/có/ừ) -> next_action=schedule_reminder, input=confirm_add
-    - Nếu ngữ cảnh có entry pending và người dùng sửa -> next_action=schedule_reminder, input=add với thông tin mới
-    - Nếu ngữ cảnh có entry pending và người dùng từ chối -> next_action=schedule_reminder, input=cancel_add
-  </context_rules>
-  <task_rules>
-    - Sau mỗi lần gọi search_web: nếu kết quả chưa đủ thông tin, thiếu số liệu cụ thể, hoặc quá chung chung -> thử lại với từ khoá khác cụ thể hơn
-    - Nếu search_web trả về các URL/nguồn có vẻ liên quan -> dùng url_search để đọc nội dung chi tiết từ các URL đó
-    - Có thể gọi search_web và url_search nhiều lần để lấy dữ liệu từ nhiều nguồn khác nhau
-    - Chỉ output answer khi đã có đủ dữ liệu để trả lời. Không dừng sớm.
-  </task_rules>
-  <tools>
-    <tool name="schedule_reminder">
-      <input>add|confirm_add|cancel_add|list|delete</input>
-      <parameters>
-        <param name="title" required="add,confirm_add">Tiêu đề lịch</param>
-        <param name="hour" required="add,confirm_add">Giờ (0-23)</param>
-        <param name="minute" required="add,confirm_add">Phút (0-59)</param>
-        <param name="type" required="add,confirm_add">"daily" hoặc "once"</param>
-        <param name="action_type" required="add">"reminder" (nhắc text) hoặc "agent_task" (báo cáo tự động)</param>
-        <param name="prompt" required="agent_task">Yêu cầu chi tiết agent sẽ thực thi khi đến giờ</param>
-        <param name="schedule_id" required="delete">ID lịch cần xoá</param>
-      </parameters>
-    </tool>
-    <tool name="calculus_calculator">
-      <input>calculate|derivative|integral</input>
-      <parameters>
-        <param name="expression" required="all">Biểu thức toán học</param>
-        <param name="variable" optional="all">Biến số (mặc định x)</param>
-        <param name="lower_bound" optional="integral">Cận dưới</param>
-        <param name="upper_bound" optional="integral">Cận trên</param>
-      </parameters>
-    </tool>
-    <tool name="search_web">
-      <input>search</input>
-      <parameters>
-        <param name="query" required="search">Từ khoá tìm kiếm</param>
-      </parameters>
-    </tool>
-    <tool name="url_search">
-      <input>fetch</input>
-      <parameters>
-        <param name="url" required="fetch">URL cần đọc</param>
-      </parameters>
-    </tool>
-    <tool name="generate_image">
-      <input>generate</input>
-      <parameters>
-        <param name="prompt" required="generate">Mô tả ảnh cần tạo</param>
-      </parameters>
-    </tool>
-    <tool name="generate_voice">
-      <input>generate</input>
-      <parameters>
-        <param name="text" required="generate">Nội dung cần đọc</param>
-      </parameters>
-    </tool>
-    <tool name="expense_tracker">
-      <input>add|list|delete</input>
-      <parameters>
-        <param name="amount" required="add">Số tiền</param>
-        <param name="category" required="add">Danh mục (food/transport/entertainment/other)</param>
-        <param name="note" optional="add">Ghi chú</param>
-        <param name="expense_id" required="delete">ID chi tiêu cần xoá</param>
-      </parameters>
-    </tool>
-  </tools>
-  <schedule_rules>
-    <step number="1">Người dùng yêu cầu thêm lịch -> input=add, next_action=schedule_reminder với đầy đủ title/hour/minute/type/action_type</step>
-    <step number="1b">Người dùng yêu cầu báo cáo định kỳ vào giờ cố định -> input=add, action_type=agent_task, prompt mô tả chi tiết công việc agent cần làm khi đến giờ</step>
-    <step number="1c">Nếu action_type="agent_task": sau khi add trả pending -> gọi confirm_add NGAY (bỏ qua bước hỏi xác nhận). Không output answer.</step>
-    <step number="1.5">Nếu action_type="reminder": SAU KHI tool trả về "pending": ngay lập tức output next_action="answer" — KHÔNG tự động confirm_add. Đợi người dùng xác nhận ở message tiếp theo.</step>
-    <step number="2">Người dùng xác nhận (message riêng, nói "ok/yes/đồng ý/có/ừ") -> input=confirm_add, next_action=schedule_reminder. LẤY title/hour/minute/action_type/prompt từ kết quả (result) của entry pending trong ngữ cảnh.</step>
-    <warning>KHÔNG tự động gọi confirm_add sau khi nhận pending (ngoại trừ agent_task). Luôn phải dừng lại và hỏi người dùng trước.</warning>
-    <warning>confirm_add CHỈ được gọi khi người dùng chủ động xác nhận ở một message hoàn toàn riêng biệt, hoặc action_type là agent_task.</warning>
-  </schedule_rules>
-  <output_logic>
-    - next_action="answer": dừng vòng lặp. input là nội dung trả về cuối cùng.
-      NẾU đã gọi tool: input mô tả ngắn gọn những gì đã làm và cần người dùng làm gì tiếp theo (vd: "Đã phân tích lịch 'Đi ngủ' 0h23 hằng ngày. Người dùng cần xác nhận.")
-      NẾU không gọi tool: input là câu trả lời trực tiếp
-    - next_action=tên_công_cụ: mã sẽ gọi công cụ tương ứng. input là hành động của công cụ đó. parameters là tham số.
-    - LUÔN đặt next_action. KHÔNG bao giờ để trống.
-  </output_logic>
-</brain>"""
+BRAIN_SYSTEM = _load_prompt(BRAIN_PROMPT_FILE)
 
 # Track context entries for each user (persists across messages)
 CONTEXT: Dict[int, List[Dict]] = {}
@@ -163,7 +72,7 @@ def _encode_image(image_path: Path) -> Optional[str]:
         with open(image_path, "rb") as f:
             return base64.b64encode(f.read()).decode("utf-8")
     except Exception as e:
-        logger.error(f"Loi encode anh {image_path}: {e}")
+        logger.error(f"Lỗi encode ảnh {image_path}: {e}")
         return None
 
 
@@ -202,20 +111,20 @@ def _parse_tool_json(text: str) -> Optional[Dict]:
     if not next_action or next_action == "answer":
         return data
     if next_action not in VALID_TOOLS:
-        logger.warning(f"[BRAIN] next_action khong hop le: {next_action}")
+        logger.warning(f"[BRAIN] next_action không hợp lệ: {next_action}")
         return None
     return data
 
 
 def _wrap_brain_output(tools_called: bool, tool_name: str, tool_result: str, fallback: str) -> str:
     if tools_called and tool_name:
-        return f"[Ket qua tu tool {tool_name}]: {tool_result}"
+        return f"[Kết quả từ tool {tool_name}]: {tool_result}"
     return fallback
 
 
 def _execute_tool(tool_name: str, action: str, params: dict, user_id: int) -> Tuple[str, Optional[str]]:
     generated_image = None
-    logger.info(f"[TOOL] Goi tool: {tool_name} | input={action} | params={json.dumps(params, ensure_ascii=False)[:200]}")
+    logger.info(f"[TOOL] Gọi tool: {tool_name} | input={action} | params={json.dumps(params, ensure_ascii=False)[:200]}")
 
     all_args = {**params, "_user_id": user_id}
 
@@ -245,25 +154,25 @@ def _execute_tool(tool_name: str, action: str, params: dict, user_id: int) -> Tu
         elif tool_name == "generate_image":
             img_path = call_api_generate_image(params)
             generated_image = img_path
-            result = f"Da tao anh va luu tai {img_path}"
+            result = f"Đã tạo ảnh và lưu tại {img_path}"
 
         elif tool_name == "generate_voice":
-            result = f"Da tao giong noi cho: {params.get('text', '')}"
+            result = f"Đã tạo giọng nói cho: {params.get('text', '')}"
 
         elif tool_name == "expense_tracker":
             all_args["action"] = action
             result = handle_expense_tool(args=all_args)
 
         else:
-            result = f"Tool khong ho tro: {tool_name}"
+            result = f"Tool không hỗ trợ: {tool_name}"
 
     except Exception as e:
         import traceback
         traceback.print_exc()
-        result = f"Loi khi chay tool {tool_name}: {str(e)}"
+        result = f"Lỗi khi chạy tool {tool_name}: {str(e)}"
 
     result_str = str(result)
-    logger.info(f"[TOOL] Ket qua: {result_str[:200]}")
+    logger.info(f"[TOOL] Kết quả: {result_str[:200]}")
 
     # Save to CONTEXT
     CONTEXT.setdefault(user_id, []).append({
@@ -285,10 +194,10 @@ def _brain_process(user_message: str, user_id: int,
     system_content = BRAIN_SYSTEM
     if context_str:
         system_content += "\n\n" + context_str
-        logger.info(f"[BRAIN] Co context ({len(context_str)} chars)")
+        logger.info(f"[BRAIN] Có context ({len(context_str)} chars)")
     if task_context:
         system_content += "\n\n" + task_context
-        logger.info(f"[BRAIN] Co task_context ({len(task_context)} chars)")
+        logger.info(f"[BRAIN] Có task_context ({len(task_context)} chars)")
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     content = f"[{now}] (user_id={user_id}) {user_message.strip()}"
@@ -316,40 +225,40 @@ def _brain_process(user_message: str, user_id: int,
     prev_calls: List[Tuple[str, str]] = []  # (tool_name, input) để phát hiện lặp
 
     for attempt in range(3):
-        logger.info(f"[BRAIN] Attempt {attempt + 1}/3 — goi LLM")
+        logger.info(f"[BRAIN] Attempt {attempt + 1}/3 — gọi LLM")
         try:
             data = call_api_llm.call_chat_api(
                 model=config.MODEL_NAME, messages=messages, stream=False)
             finish = data.get('choices', [{}])[0].get('finish_reason', '?') if 'choices' in data else '?'
-            logger.info(f"[BRAIN] LLM tra ve: finish_reason={finish}")
-            logger.info(f"[BRAIN] LLM tra ve: finish_reason={data}")
+            logger.info(f"[BRAIN] LLM trả về: finish_reason={finish}")
+            logger.info(f"[BRAIN] LLM trả về: finish_reason={data}")
 
         except Exception as e:
             logger.error(f"[BRAIN] LLM call failed: {e}")
-            return _wrap_brain_output(tools_called, last_tool_name, last_tool_result, f"Loi: {str(e)}"), None
+            return _wrap_brain_output(tools_called, last_tool_name, last_tool_result, f"Lỗi: {str(e)}"), None
 
         msg = data.get("message") or (data.get("choices", [{}])[0].get("message", {}) if "choices" in data else None)
         if not msg:
-            logger.warning("[BRAIN] Khong lay duoc message tu response")
-            return _wrap_brain_output(tools_called, last_tool_name, last_tool_result, "Khong the lay phan hoi tu API."), None
+            logger.warning("[BRAIN] Không lấy được message từ response")
+            return _wrap_brain_output(tools_called, last_tool_name, last_tool_result, "Không thể lấy phản hồi từ API."), None
 
         raw_text = msg.get("content", "").strip()
         parsed = _parse_tool_json(raw_text)
 
         if not parsed:
             # Not valid JSON — treat as raw answer text
-            logger.info(f"[BRAIN] Khong phai JSON, tra ve raw text ({len(raw_text)} chars)")
+            logger.info(f"[BRAIN] Không phải JSON, trả về raw text ({len(raw_text)} chars)")
             return _wrap_brain_output(tools_called, last_tool_name, last_tool_result, raw_text), generated_image
 
         next_action = parsed.get("next_action", "")
 
         if next_action == "answer":
             answer_text = parsed.get("input", "") or parsed.get("reason", "") or raw_text
-            logger.info(f"[BRAIN] Nhan answer, input={answer_text[:100]}")
+            logger.info(f"[BRAIN] Nhận answer, input={answer_text[:100]}")
             return answer_text, generated_image
 
         if not next_action:
-            logger.warning("[BRAIN] next_action trong, khong hop le")
+            logger.warning("[BRAIN] next_action trống, không hợp lệ")
             return _wrap_brain_output(tools_called, last_tool_name, last_tool_result, raw_text), generated_image
 
         # Execute tool
@@ -365,15 +274,15 @@ def _brain_process(user_message: str, user_id: int,
         # Phát hiện lặp: nếu tool+input giống hệt lần trước -> dừng
         call_key = (next_action, input_val)
         if prev_calls and prev_calls[-1] == call_key:
-            logger.warning(f"[BRAIN] Phat hien lap tool {next_action}/{input_val}, dung loop")
-            return _wrap_brain_output(tools_called, last_tool_name, last_tool_result, f"[Ket qua tu tool {next_action}]: {result_text}"), generated_image
+            logger.warning(f"[BRAIN] Phát hiện lặp tool {next_action}/{input_val}, dừng loop")
+            return _wrap_brain_output(tools_called, last_tool_name, last_tool_result, f"[Kết quả từ tool {next_action}]: {result_text}"), generated_image
         prev_calls.append(call_key)
 
         # Add result to messages for next iteration
         messages.append({"role": "system", "content": f"[TOOL_RESULT] {next_action}: {result_text}"})
 
-    logger.warning("[BRAIN] Het 3 lan thu, tra ve fallback")
-    return _wrap_brain_output(tools_called, last_tool_name, last_tool_result, "Qua so lan xu ly."), generated_image
+    logger.warning("[BRAIN] Hết 3 lần thử, trả về fallback")
+    return _wrap_brain_output(tools_called, last_tool_name, last_tool_result, "Quá số lần xử lý."), generated_image
 
 
 # ============================================================
@@ -388,12 +297,12 @@ def _load_history(user_id: int):
     profile = _load_user_profile(user_id)
     prompt = BASE_SYSTEM
     if profile.get("name"):
-        prompt += f"\n\nNguoi dung cua ban ten la {profile['name']}."
+        prompt += f"\n\nNgười dùng của bạn tên là {profile['name']}."
     prefs = profile.get("preferences", {})
     if prefs.get("habits"):
-        prompt += f"\nThoi quen: {', '.join(prefs['habits'])}."
+        prompt += f"\nThói quen: {', '.join(prefs['habits'])}."
     if prefs.get("interests"):
-        prompt += f"\nSo thich: {', '.join(prefs['interests'])}."
+        prompt += f"\nSở thích: {', '.join(prefs['interests'])}."
 
     raw = memory.load_chat_history()
     full_prompt = prompt + RESPONDER_INSTRUCTION
@@ -414,22 +323,22 @@ def _responder_cycle(brain_result: str, user_id: int,
     HISTORY.append({"role": "system", "content": f"[BRAIN_RESULT] {brain_result}"})
 
     try:
-        logger.info("[RESPONDER] Goi LLM de stylize cau tra loi...")
+        logger.info("[RESPONDER] Gọi LLM để stylize câu trả lời...")
         data = call_api_llm.call_chat_api(
             model=config.MODEL_NAME, messages=HISTORY, stream=False)
     except Exception as e:
         logger.error(f"[RESPONDER] LLM call failed: {e}")
         HISTORY.pop()
-        return f"Loi: {str(e)}"
+        return f"Lỗi: {str(e)}"
 
     msg = data.get("message") or (data.get("choices", [{}])[0].get("message", {}) if "choices" in data else None)
     if not msg:
-        logger.warning("[RESPONDER] Khong lay duoc message tu response")
+        logger.warning("[RESPONDER] Không lấy được message từ response")
         HISTORY.pop()
-        return "Khong the lay phan hoi."
+        return "Không thể lấy phản hồi."
 
     content = msg.get("content", "")
-    logger.info(f"[RESPONDER] Tra ve ({len(content)} chars): {content[:150]}")
+    logger.info(f"[RESPONDER] Trả về ({len(content)} chars): {content[:150]}")
     if content:
         HISTORY.append({"role": "assistant", "content": content})
     if len(HISTORY) > config.MAX_TOKEN_CHAT // 2:
@@ -447,32 +356,32 @@ def process_message(message: str, user_id: int, channel=None,
                     audio_paths: Optional[List[Path]] = None,
                     task_context: str = ""):
     if not message and not image_paths:
-        logger.info("[MAIN] Bo qua: khong co message va khong co image")
+        logger.info("[MAIN] Bỏ qua: không có message và không có image")
         return None
 
-    logger.info(f"[MAIN] === NHAN TIN NHAN === user_id={user_id} | {message[:100]} | images={len(image_paths or [])} | task_context={'co' if task_context else 'khong'}")
+    logger.info(f"[MAIN] === NHẬN TIN NHẮN === user_id={user_id} | {message[:100]} | images={len(image_paths or [])} | task_context={'có' if task_context else 'không'}")
 
-    # Phase 1: Brain (voi context tu cac hanh dong truoc)
+    # Phase 1: Brain (với context từ các hành động trước)
     context = _get_recent_context(user_id)
-    logger.info("[MAIN] Phase 1: BRAIN — bat dau xu ly tool...")
+    logger.info("[MAIN] Phase 1: BRAIN — bắt đầu xử lý tool...")
     brain_result, generated_image = _brain_process(message, user_id, image_paths, context_str=context, task_context=task_context)
-    logger.info(f"[MAIN] Phase 1: BRAIN — ket qua: ({len(brain_result)} chars) {brain_result[:200]}")
+    logger.info(f"[MAIN] Phase 1: BRAIN — kết quả: ({len(brain_result)} chars) {brain_result[:200]}")
 
     # Phase 2: Responder (bỏ qua nếu là task tự động — dùng brain_result trực tiếp)
     if task_context:
-        logger.info("[MAIN] Task tu dong, bo qua Responder")
+        logger.info("[MAIN] Task tự động, bỏ qua Responder")
         if generated_image:
             return {"text": brain_result, "images": generated_image}
         return brain_result
 
     # Phase 2: Responder
-    logger.info("[MAIN] Phase 2: RESPONDER — bat dau stylize...")
+    logger.info("[MAIN] Phase 2: RESPONDER — bắt đầu stylize...")
     final_response = _responder_cycle(brain_result, user_id, image_paths, original_message=message)
-    logger.info(f"[MAIN] Phase 2: RESPONDER — hoan tat ({len(final_response)} chars)")
+    logger.info(f"[MAIN] Phase 2: RESPONDER — hoàn tất ({len(final_response)} chars)")
 
     if generated_image:
-        logger.info(f"[MAIN] Tra ve text + image: {generated_image}")
+        logger.info(f"[MAIN] Trả về text + image: {generated_image}")
         return {"text": final_response, "images": generated_image}
 
-    logger.info("[MAIN] === KET THUC ===")
+    logger.info("[MAIN] === KẾT THÚC ===")
     return final_response

@@ -54,7 +54,7 @@ def save_schedules_to_xlsx(schedules):
         df.to_excel(SCHEDULE_XLSX_FILE, index=False, sheet_name="Lịch nhắc nhở")
     except Exception as e:
         import logging
-        logging.getLogger(__name__).warning(f"Loi khi luu Excel: {e}")
+        logging.getLogger(__name__).warning(f"Lỗi khi lưu Excel: {e}")
 
 
 def save_schedules(schedules):
@@ -254,7 +254,7 @@ def execute_due_schedules(report_func=_safe_print):
         except Exception as e:
             import traceback
             traceback.print_exc()
-            report_func(f"[ERROR] Loi khi xu ly {sched['title']}: {str(e)[:200]}")
+            report_func(f"[ERROR] Lỗi khi xử lý {sched['title']}: {str(e)[:200]}")
 
         if sched.get("type") == "once":
             delete_schedule(sched["id"])
