@@ -1,46 +1,87 @@
 from datetime import datetime
 from youtube_search import YoutubeSearch
-# from duckduckgo_search import DDGS
-from ddgs import DDGS
-from langchain_community.document_loaders import WebBaseLoader
-import re
+# from langchain_community.document_loaders import WebBaseLoader
+import requests
+# import time
+# import re
+import random
+
+from modules.parsers.search import parse_bing, parse_ddg, parse_tavily
+import modules.config.config as config
+
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/119.0",
+]
+
 
 def calendar_tool() -> str:
     today = datetime.now()
     return f"Thông tin thời gian hiện tại là {today.strftime('%H:%M %A %d/%m/%Y')}"
 
+
+# === Backend search functions ===
+
+def _search_bing(query: str, max_results: int = 5) -> list:
+    headers = {"User-Agent": random.choice(USER_AGENTS)}
+    r = requests.get(
+        "https://www.bing.com/search",
+        params={"q": query, "setlang": "vi"},
+        headers=headers,
+        timeout=10,
+    )
+    if r.status_code != 200:
+        return []
+    return parse_bing(r.text, max_results)
+
+
+def _search_ddg(query: str, max_results: int = 5) -> list:
+    headers = {"User-Agent": random.choice(USER_AGENTS)}
+    data = {"q": query}
+    r = requests.post(
+        "https://html.duckduckgo.com/html/",
+        data=data,
+        headers=headers,
+        timeout=10,
+    )
+    if r.status_code != 200:
+        return []
+    return parse_ddg(r.text, max_results)
+
+
+def _search_tavily(query: str, max_results: int = 5) -> list:
+    api_key = config.TAVILY_KEY
+    if not api_key:
+        return []
+    r = requests.post(
+        "https://api.tavily.com/search",
+        json={"api_key": api_key, "query": query, "max_results": max_results},
+        timeout=15,
+    )
+    if r.status_code != 200:
+        return []
+    return parse_tavily(r.json(), max_results)
+
+
+# === Public interface ===
+
 def web_search(query, max_results=5):
-    # loader = WebBaseLoader(query, max_results=max_results)
-    # return loader.load()
-    
-    # Tập trung tìm kiếm vào các sàn thương mại điện tử lớn để lấy giá chi tiết của sản phẩm
-    ecommerce_sites = "site:shopee.vn OR site:lazada.vn OR site:tiki.vn OR site:bachhoaxanh.com OR site:cooponline.vn"
-    # Thêm "giá" và loại bỏ các từ khóa chung chung bằng - để vào thẳng trang sản phẩm
-    search_query = f"giá {query} {ecommerce_sites} -blog -tin-tuc -tuyen-dung"
-    
+    backends = [_search_bing, _search_ddg, _search_tavily]
     results = []
+    for backend in backends:
+        try:
+            results = backend(query, max_results)
+            if results:
+                break
+        except Exception:
+            continue
     text = ""
-    try:
-        # Sử dụng timelimit=None để tìm kết quả phù hợp nhất thay vì bị giới hạn bởi thời gian quá gắt gao
-        for result in DDGS().text(search_query, max_results=max_results, region="vn-vi"):
-            results.append({
-                "title": result['title'],
-                "url": result['href'],
-                "description": result['body']
-            })
-            text += f"Title: {result['title']}\nURL: {result['href']}\nDescription: {result['body']}\n\n"
-    except Exception as e:
-        print(f"Lỗi tìm kiếm: {e}")
-        # Fallback về tìm kiếm thông thường nếu tìm kiếm theo site bị lỗi hoặc không có kết quả
-        for result in DDGS().text(query, max_results=max_results, region="vn-vi", timelimit="y"):
-            results.append({
-                "title": result['title'],
-                "url": result['href'],
-                "description": result['body']
-            })
-            text += f"Title: {result['title']}\nURL: {result['href']}\nDescription: {result['body']}\n\n"
-            
+    for r in results[:max_results]:
+        text += f"Title: {r['title']}\nURL: {r['url']}\nDescription: {r['description']}\n\n"
     return results, text
+
 
 def search_youtube(query, limit=5):
     results = YoutubeSearch(query, max_results=limit).to_dict()
@@ -51,24 +92,19 @@ def search_youtube(query, limit=5):
         "views": r['views']
     } for r in results]
 
-def web_crawl_data(url_doc):
-    loader = WebBaseLoader(
-            web_paths=url_doc)
-    # print(loader)
-    document_to_compare = loader.load()
-    return document_to_compare
 
-def search_with_ddgs(query, max_results=3):
-    import time
-    tool = DDGS()
-    content=""
-    search_results = tool.text(query, region="vn-vi", max_results=max_results)
-    print(search_results)
-    for list_web in search_results:
-        docs = web_crawl_data([list_web["href"]])
-        time.sleep(1)
-        for doc in docs:
-            content += f"source: {doc.metadata['source']} title: {doc.metadata['title']} content: {doc.page_content}\n\n"
-    content = re.sub(r'\s+', ' ', content)  # Thay thế tất cả khoảng trắng (bao gồm \n, \t) bằng một dấu cách đơn
-    content = content.strip()
-    return content
+# def web_crawl_data(url_doc):
+#     loader = WebBaseLoader(web_paths=url_doc)
+#     return loader.load()
+
+
+# def search_with_ddgs(query, max_results=3):
+#     results, _ = web_search(query, max_results)
+#     content = ""
+#     for r in results:
+#         docs = web_crawl_data([r["url"]])
+#         time.sleep(1)
+#         for doc in docs:
+#             content += f"source: {doc.metadata['source']} title: {doc.metadata['title']} content: {doc.page_content}\n\n"
+#     content = re.sub(r'\s+', ' ', content).strip()
+#     return content

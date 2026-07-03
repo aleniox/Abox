@@ -22,26 +22,6 @@ search_web_tool = {
 }
 
 
-url_search_tool = {
-    'type': 'function',
-    'function': {
-        'name': 'url_search',
-        'description': 'Tìm kiếm thông tin từ một URL cụ thể được cung cấp',
-        'parameters': {
-            'type': 'object',
-            'required': ['url'],
-            'properties': {
-                'url': {
-                    'type': 'string',
-                    'format': 'uri',
-                    'description': 'Danh sách URL để tìm kiếm thông tin',
-                }
-            }
-        }
-    }
-}
-
-
 calculus_tool = {
     "type": "function",
     "function": {
@@ -151,6 +131,26 @@ generate_voice_tools = {
                 }
             },
             "required": ["text"]
+        }
+    }
+}
+
+
+crawl4ai_tool = {
+    'type': 'function',
+    'function': {
+        'name': 'crawl4ai',
+        'description': 'Sử dụng crawl4ai để thu thập dữ liệu nội dung từ một trang web dưới dạng markdown.',
+        'parameters': {
+            'type': 'object',
+            'required': ['url'],
+            'properties': {
+                'url': {
+                    'type': 'string',
+                    'format': 'uri',
+                    'description': 'URL cần crawl dữ liệu',
+                }
+            }
         }
     }
 }

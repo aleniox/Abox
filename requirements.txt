@@ -4,7 +4,6 @@ youtube_search
 # sentence_transformers
 SpeechRecognition
 # whisperx==3.3.2
-ddgs
 google-genai
 python-dotenv
 pillow

@@ -1,7 +1,7 @@
 import requests
 import logging
 import modules.config.config as config
-from transformers import AutoTokenizer
+# from transformers import AutoTokenizer
 
 
 logging.basicConfig(
@@ -32,17 +32,3 @@ def call_chat_api(messages,
     response = requests.post(host, json=payload, stream=stream)
     response.raise_for_status()
     return response.json()
-
-
-def get_tokenizer():
-    return AutoTokenizer.from_pretrained(config.TOKENIZE)
-
-
-def compute_tokenize(context):
-    tokenizer = get_tokenizer()
-    tokens = tokenizer.tokenize(context)
-    print(f"Char count: {len(context)}")
-    print(f"Word count: {len(context.split())}")
-    print(f"Token count: {len(tokens)}")
-
-    return len(context), len(context.split()), len(tokens)

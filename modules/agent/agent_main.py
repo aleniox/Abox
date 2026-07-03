@@ -12,9 +12,10 @@ import modules.memory.memory as memory
 
 from modules.tools.tool_schedule import handle_schedule_tool
 from modules.tools.tools_call import calculus_calculator
-from modules.tools.tool_searchs import web_search, web_crawl_data
+from modules.tools.tool_searchs import web_search
 from modules.tools.tool_generate import call_api_generate_image
 from modules.tools.tool_expense import handle_expense_tool
+from modules.tools.tool_crawl4ai import crawl_web
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ def _load_user_profile(user_id: int) -> dict:
 
 VALID_TOOLS = {
     "schedule_reminder", "calculus_calculator", "search_web",
-    "url_search", "generate_image", "generate_voice", "expense_tracker"
+    "generate_image", "generate_voice", "expense_tracker", "crawl4ai"
 }
 
 BRAIN_SYSTEM = _load_prompt(BRAIN_PROMPT_FILE)
@@ -143,13 +144,6 @@ def _execute_tool(tool_name: str, action: str, params: dict, user_id: int) -> Tu
             contexts = web_search(query=params.get("query", ""))
             result = contexts[1]
 
-        elif tool_name == "url_search":
-            docs = web_crawl_data(url_doc=params.get("url", ""))
-            result = '\n'.join(
-                f"Source: {doc.metadata.get('source')}, Title: {doc.metadata.get('title')}, "
-                f"Language: {doc.metadata.get('language', 'None')}, "
-                f"Page_content: {clean_excessive_newlines(doc.page_content)}"
-                for doc in docs)
 
         elif tool_name == "generate_image":
             img_path = call_api_generate_image(params)
@@ -162,6 +156,14 @@ def _execute_tool(tool_name: str, action: str, params: dict, user_id: int) -> Tu
         elif tool_name == "expense_tracker":
             all_args["action"] = action
             result = handle_expense_tool(args=all_args)
+
+        elif tool_name == "crawl4ai":
+            raw_content = crawl_web(url=params.get("url", ""))
+            if raw_content:
+                cleaned = clean_excessive_newlines(raw_content)
+                result = cleaned[:15000] + "\n...[Nội dung đã bị cắt bớt do quá dài]" if len(cleaned) > 15000 else cleaned
+            else:
+                result = "Không lấy được dữ liệu từ URL."
 
         else:
             result = f"Tool không hỗ trợ: {tool_name}"
