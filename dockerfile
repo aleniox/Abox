@@ -15,8 +15,8 @@ WORKDIR /app
 COPY requirements.txt /app/
 
 # Tạo venv
-RUN python3 -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
+# RUN python3 -m venv /opt/venv
+# ENV PATH="/opt/venv/bin:$PATH"
 
 # Cài đặt uv binary trực tiếp (nhanh hơn pip)
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -24,13 +24,15 @@ ENV PATH="/root/.local/bin:$PATH"
 COPY . /app/
 
 # Cài đặt các thư viện từ requirements.txt
-RUN UV_HTTP_TIMEOUT=300 uv sync
+RUN uv sync
 
 # Cài đặt Playwright browser (chromium) và các dependencies hệ thống cần thiết
-RUN playwright install chromium
-RUN playwright install-deps chromium
+# RUN playwright install chromium
+# RUN playwright install-deps chromium
+RUN uv run playwright install chromium
+RUN uv run playwright install-deps chromium
 
 # Copy toàn bộ mã nguồn vào container
 
 EXPOSE 5000
-CMD ["python3", "main.py"]
+CMD ["uv", "run", "main.py"]
