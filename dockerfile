@@ -1,9 +1,9 @@
 # Sử dụng Python 3.12 làm image cơ sở
-FROM nvidia/cuda:13.0.1-cudnn-runtime-ubuntu24.04
+FROM python:3.12.13
 
 RUN apt-get update && apt-get install -y \
-    python3 \
-    python3-venv \
+    # python3 \
+    # python3-venv \
     # python3-pip (thay bằng uv - nhanh hơn) \
     ffmpeg \
     curl \
@@ -21,16 +21,16 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Cài đặt uv binary trực tiếp (nhanh hơn pip)
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:$PATH"
+COPY . /app/
 
 # Cài đặt các thư viện từ requirements.txt
-RUN UV_HTTP_TIMEOUT=300 uv pip install --no-cache-dir -r requirements.txt
+RUN UV_HTTP_TIMEOUT=300 uv sync
 
 # Cài đặt Playwright browser (chromium) và các dependencies hệ thống cần thiết
 RUN playwright install chromium
 RUN playwright install-deps chromium
 
 # Copy toàn bộ mã nguồn vào container
-COPY . /app/
 
 EXPOSE 5000
 CMD ["python3", "main.py"]
