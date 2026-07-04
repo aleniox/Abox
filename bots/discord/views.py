@@ -162,6 +162,45 @@ class RunLoginView(discord.ui.View):
         await interaction.response.send_modal(TimerModal(self))
 
 
+class ReminderView(discord.ui.View):
+    """View for reminder notification with Dismiss and Snooze buttons"""
+
+    def __init__(self, allowed_user_id: int, sched_id: str):
+        super().__init__(timeout=300)
+        self.allowed_user_id = allowed_user_id
+        self.sched_id = sched_id
+
+    async def _disable(self, interaction: discord.Interaction):
+        for item in self.children:
+            item.disabled = True
+        try:
+            await interaction.message.edit(view=self)
+        except Exception:
+            pass
+
+    @discord.ui.button(label="Đã xem", style=discord.ButtonStyle.success, emoji="✅")
+    async def dismiss(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.allowed_user_id:
+            await interaction.response.send_message("❌ Bạn không thể thao tác.", ephemeral=True)
+            return
+        bot = interaction.client
+        if hasattr(bot, 'pending_reminders') and self.sched_id in bot.pending_reminders:
+            bot.pending_reminders[self.sched_id]["dismissed"] = True
+        await self._disable(interaction)
+        await interaction.response.edit_message(content="✅ Đã xác nhận.", embed=None)
+
+    @discord.ui.button(label="Nhắc lại sau 5p", style=discord.ButtonStyle.secondary, emoji="⏰")
+    async def snooze(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.allowed_user_id:
+            await interaction.response.send_message("❌ Bạn không thể thao tác.", ephemeral=True)
+            return
+        bot = interaction.client
+        if hasattr(bot, 'pending_reminders') and self.sched_id in bot.pending_reminders:
+            bot.pending_reminders[self.sched_id]["snoozed_until"] = datetime.now().timestamp() + 300
+        await self._disable(interaction)
+        await interaction.response.edit_message(content="⏰ Sẽ nhắc lại sau 5 phút.", embed=None)
+
+
 class ShutdownConfirm(discord.ui.View):
     """View for confirming system shutdown"""
 

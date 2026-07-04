@@ -6,7 +6,7 @@ import requests
 # import re
 import random
 
-from modules.parsers.search import parse_bing, parse_ddg, parse_tavily
+from modules.parsers.search import parse_bing, parse_ddg, parse_tavily, _clean_url
 import modules.config.config as config
 
 USER_AGENTS = [

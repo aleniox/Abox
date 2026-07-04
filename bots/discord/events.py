@@ -51,8 +51,14 @@ def setup_events(bot: commands.Bot, max_retries: int = 5, retry_delay: int = 5):
             for sched in missed:
                 user = await bot.fetch_user(sched["user_id"])
                 atype = sched.get("action", {}).get("type", "reminder")
-                if atype == "reminder":
-                    await user.send(f"⏰ **Nhắc nhở (bù):** {sched['title']}")
+                embed = discord.Embed(
+                    title="⏰ Nhắc nhở (bù)",
+                    description=sched["title"],
+                    color=discord.Color.purple(),
+                    timestamp=datetime.now()
+                )
+                embed.set_footer(text="Lịch đã bị lỡ khi bot offline")
+                await user.send(f"<@{sched['user_id']}>", embed=embed)
                 delete_schedule(sched["id"])
                 logger.info(f"Caught up missed once schedule: {sched['title']}")
         except Exception as e:

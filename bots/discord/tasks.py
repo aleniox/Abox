@@ -6,10 +6,11 @@ from discord.ext import tasks
 import asyncio
 import csv
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from bots.discord.bot_config import CHECKIN_CONFIG, VN_TZ, LOGIN_CSV_PATH, TASK_STYLE, VOICE_CACHE_PATH, USER_ID
+from bots.discord.views import ReminderView
 import modules.tools.tool_login as tool_login
 import modules.config.config as config
 
@@ -132,12 +133,66 @@ def setup_daily_task(bot: discord.Client):
 
 def setup_reminder_task(bot: discord.Client):
     """Setup reminder check task for user schedules"""
+    bot.pending_reminders = {}
+
+    async def _send_reminder_embed(user: discord.User, sched: dict):
+        embed = discord.Embed(
+            title="⏰ Nhắc nhở",
+            description=sched["title"],
+            color=discord.Color.purple(),
+            timestamp=datetime.now(VN_TZ)
+        )
+        embed.set_footer(text="Rei - Người bạn ấm áp")
+        view = ReminderView(user.id, sched["id"])
+        await user.send(f"<@{user.id}>", embed=embed, view=view)
+
+    async def _followup_reminder(pr: dict):
+        try:
+            user = await bot.fetch_user(pr["user_id"])
+            sched_id = None
+            for sid, p in bot.pending_reminders.items():
+                if p is pr:
+                    sched_id = sid
+                    break
+            if not sched_id:
+                return
+            embed = discord.Embed(
+                title="⏰ Nhắc lại",
+                description=pr["title"],
+                color=discord.Color.purple(),
+                timestamp=datetime.now(VN_TZ)
+            )
+            embed.set_footer(text="Rei - Người bạn ấm áp (lần %d/3)" % (pr["sent_count"] + 1))
+            view = ReminderView(user.id, sched_id)
+            await user.send(f"<@{user.id}>", embed=embed, view=view)
+            pr["sent_count"] += 1
+            pr["last_sent"] = datetime.now()
+            pr["snoozed_until"] = None
+        except Exception as e:
+            logger.error(f"Follow-up reminder error: {e}")
 
     @tasks.loop(minutes=1)
     async def reminder_check():
         from modules.tools.tool_schedule import get_due_schedules, delete_schedule
 
         now = datetime.now(VN_TZ)
+
+        # Follow-up check for pending reminders
+        to_remove = []
+        for sched_id, pr in list(bot.pending_reminders.items()):
+            if pr["dismissed"]:
+                to_remove.append(sched_id)
+                continue
+            if pr["sent_count"] >= 3:
+                to_remove.append(sched_id)
+                continue
+            if pr["snoozed_until"] and datetime.now().timestamp() < pr["snoozed_until"]:
+                continue
+            if (datetime.now() - pr["last_sent"]).total_seconds() >= 300:
+                await _followup_reminder(pr)
+        for sid in to_remove:
+            bot.pending_reminders.pop(sid, None)
+
         due = get_due_schedules(now.hour, now.minute)
 
         for sched in due:
@@ -153,7 +208,21 @@ def setup_reminder_task(bot: discord.Client):
             atype = action.get("type", "reminder")
 
             if atype == "reminder":
-                await user.send(f"⏰ **Nhắc nhở:** {sched['title']}")
+                # Track and send with embed + buttons + ping
+                sched_id = sched["id"]
+                if sched_id not in bot.pending_reminders:
+                    bot.pending_reminders[sched_id] = {
+                        "user_id": sched["user_id"],
+                        "title": sched["title"],
+                        "sent_count": 1,
+                        "dismissed": False,
+                        "snoozed_until": None,
+                        "last_sent": datetime.now()
+                    }
+                else:
+                    bot.pending_reminders[sched_id]["sent_count"] += 1
+                    bot.pending_reminders[sched_id]["last_sent"] = datetime.now()
+                await _send_reminder_embed(user, sched)
 
             elif atype == "web_scrape":
                 url = action.get("url", "")
