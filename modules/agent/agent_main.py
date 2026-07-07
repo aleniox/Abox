@@ -123,7 +123,7 @@ def _wrap_brain_output(tools_called: bool, tool_name: str, tool_result: str, fal
     return fallback
 
 
-def _execute_tool(tool_name: str, action: str, params: dict, user_id: int) -> Tuple[str, Optional[str]]:
+def _execute_tool(tool_name: str, action: str, params: dict, user_id: int, platform: str = "discord") -> Tuple[str, Optional[str]]:
     generated_image = None
     logger.info(f"[TOOL] Gọi tool: {tool_name} | input={action} | params={json.dumps(params, ensure_ascii=False)[:200]}")
 
@@ -132,6 +132,7 @@ def _execute_tool(tool_name: str, action: str, params: dict, user_id: int) -> Tu
     try:
         if tool_name == "schedule_reminder":
             all_args["action"] = action
+            all_args["platform"] = platform
             result = handle_schedule_tool(all_args, user_id)
 
         elif tool_name == "calculus_calculator":
@@ -190,7 +191,8 @@ def _execute_tool(tool_name: str, action: str, params: dict, user_id: int) -> Tu
 def _brain_process(user_message: str, user_id: int,
                    image_paths: Optional[List[Path]] = None,
                    context_str: str = "",
-                   task_context: str = "") -> Tuple[str, Optional[str]]:
+                   task_context: str = "",
+                   platform: str = "discord") -> Tuple[str, Optional[str]]:
     logger.info(f"[BRAIN] === START === user_id={user_id} | message={user_message[:100]} | images={len(image_paths or [])}")
 
     system_content = BRAIN_SYSTEM
@@ -266,7 +268,7 @@ def _brain_process(user_message: str, user_id: int,
         # Execute tool
         input_val = parsed.get("input", "")
         parameters = parsed.get("parameters", {})
-        result_text, img_path = _execute_tool(next_action, input_val, parameters, user_id)
+        result_text, img_path = _execute_tool(next_action, input_val, parameters, user_id, platform=platform)
         if img_path:
             generated_image = img_path
         tools_called = True
@@ -356,7 +358,8 @@ def _responder_cycle(brain_result: str, user_id: int,
 def process_message(message: str, user_id: int, channel=None,
                     image_paths: Optional[List[Path]] = None,
                     audio_paths: Optional[List[Path]] = None,
-                    task_context: str = ""):
+                    task_context: str = "",
+                    platform: str = "discord"):
     if not message and not image_paths:
         logger.info("[MAIN] Bỏ qua: không có message và không có image")
         return None
@@ -366,7 +369,7 @@ def process_message(message: str, user_id: int, channel=None,
     # Phase 1: Brain (với context từ các hành động trước)
     context = _get_recent_context(user_id)
     logger.info("[MAIN] Phase 1: BRAIN — bắt đầu xử lý tool...")
-    brain_result, generated_image = _brain_process(message, user_id, image_paths, context_str=context, task_context=task_context)
+    brain_result, generated_image = _brain_process(message, user_id, image_paths, context_str=context, task_context=task_context, platform=platform)
     logger.info(f"[MAIN] Phase 1: BRAIN — kết quả: ({len(brain_result)} chars) {brain_result[:200]}")
 
     # Phase 2: Responder (bỏ qua nếu là task tự động — dùng brain_result trực tiếp)

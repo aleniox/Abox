@@ -1,8 +1,7 @@
-import bots.discord.my_bot as my_bot
 import asyncio
 import logging
 import time
-
+import sys
 
 logging.basicConfig(
     level=logging.INFO,
@@ -10,21 +9,35 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def main():
-    logger.info("Starting Discord bot with reconnection handling...")
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
 
-    try:
-        loop.run_until_complete(my_bot.run_bot())
-    except KeyboardInterrupt:
-        logger.info("Received keyboard interrupt. Shutting down...")
-    except Exception as e:
-        logger.error(f"Fatal error: {e}")
-    finally:
-        loop.run_until_complete(my_bot.bot.close())
-        loop.close()
-        logger.info("Bot has shut down.")
+async def run_discord():
+    from bots.discord.my_bot import run_bot
+    logger.info("Starting Discord bot...")
+    await run_bot()
+
+
+async def run_telegram():
+    from bots.telegram.bot import run_telegram as tg_run
+    logger.info("Starting Telegram bot...")
+    await tg_run()
+
+
+async def main():
+    logger.info("Starting both bots...")
+
+    tasks = [
+        asyncio.create_task(run_discord()),
+        asyncio.create_task(run_telegram()),
+    ]
+
+    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_EXCEPTION)
+    for task in done:
+        exc = task.exception()
+        if exc:
+            logger.error(f"Bot failed: {exc}")
+    for task in pending:
+        task.cancel()
+
 
 if __name__ == "__main__":
     max_retries = 5
@@ -33,15 +46,18 @@ if __name__ == "__main__":
 
     while retry_count < max_retries:
         try:
-            main()
+            asyncio.run(main())
+            break
+        except KeyboardInterrupt:
+            logger.info("Shutting down...")
             break
         except Exception as e:
             retry_count += 1
-            logger.error(f"Bot crashed: {e}")
+            logger.error(f"Main crashed: {e}")
             logger.info(f"Retry {retry_count}/{max_retries} after {retry_delay}s...")
             time.sleep(retry_delay)
             retry_delay = min(retry_delay * 2, 60)
 
     if retry_count >= max_retries:
-        logger.critical(f"Bot failed after {max_retries} retries. Exiting.")
-        exit(1)
+        logger.critical("Failed after max retries.")
+        sys.exit(1)

@@ -138,7 +138,7 @@ def setup_reminder_task(bot: discord.Client):
         from modules.tools.tool_schedule import get_due_schedules, delete_schedule
 
         now = datetime.now(VN_TZ)
-        due = get_due_schedules(now.hour, now.minute)
+        due = get_due_schedules(now.hour, now.minute, platform="discord")
 
         for sched in due:
             if not sched.get("enabled", True):

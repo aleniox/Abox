@@ -135,7 +135,8 @@ def setup_events(bot: commands.Bot, max_retries: int = 5, retry_delay: int = 5):
                         user_id=message.author.id,
                         channel=message.channel,
                         image_paths=image_paths,
-                        audio_paths=audio_paths
+                        audio_paths=audio_paths,
+                        platform="discord"
                     )
 
                 except Exception as e:

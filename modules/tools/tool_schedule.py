@@ -64,7 +64,7 @@ def save_schedules(schedules):
     save_schedules_to_xlsx(schedules)
 
 
-def add_schedule(user_id, title, hour, minute, type_, action):
+def add_schedule(user_id, title, hour, minute, type_, action, platform="discord"):
     schedules = load_schedules()
     try:
         hour = int(hour)
@@ -77,6 +77,7 @@ def add_schedule(user_id, title, hour, minute, type_, action):
     sched = {
         "id": str(uuid.uuid4()),
         "user_id": user_id,
+        "platform": platform,
         "title": title,
         "hour": hour,
         "minute": minute,
@@ -101,9 +102,16 @@ def list_schedules(user_id):
     return [s for s in load_schedules() if s["user_id"] == user_id and s["enabled"]]
 
 
-def get_due_schedules(hour, minute):
-    return [s for s in load_schedules()
-            if s["enabled"] and s["hour"] == hour and s["minute"] == minute]
+def get_due_schedules(hour, minute, platform=None):
+    all_sched = load_schedules()
+    result = []
+    for s in all_sched:
+        if not s.get("enabled"):
+            continue
+        if s["hour"] == hour and s["minute"] == minute:
+            if platform is None or s.get("platform", "discord") == platform:
+                result.append(s)
+    return result
 
 
 def get_missed_once_schedules(minutes_back: int = 5):
@@ -129,6 +137,69 @@ def get_missed_once_schedules(minutes_back: int = 5):
     return missed
 
 
+schedule_tool_def = {
+    "type": "function",
+    "function": {
+        "name": "schedule_reminder",
+        "description": "Quản lý lịch nhắc nhở: thêm, xem, xóa lịch. Khi user yêu cầu thêm lịch, gọi action='add' để parse thông tin. Sau đó show preview và hỏi xác nhận. CHỈ gọi confirm_add khi user đã xác nhận.",
+        "parameters": {
+            "type": "object",
+            "required": ["action", "hour", "minute"],
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["add", "confirm_add", "cancel_add", "list", "delete"],
+                    "description": "'add': parse yêu cầu và trả pending\n'confirm_add': lưu schedule đã pending vào file\n'cancel_add': hủy pending\n'list': xem danh sách lịch\n'delete': xóa lịch"
+                },
+                "title": {
+                    "type": "string",
+                    "description": "Tiêu đề lịch nhắc nhở"
+                },
+                "hour": {
+                    "type": "integer",
+                    "description": "Giờ (0-23)"
+                },
+                "minute": {
+                    "type": "integer",
+                    "description": "Phút (0-59)"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": ["daily", "once"],
+                    "description": "'daily': lặp lại mỗi ngày, 'once': một lần"
+                },
+                "action_type": {
+                    "type": "string",
+                    "enum": ["reminder", "web_scrape", "auto_action"],
+                    "description": "'reminder': nhắc nhở text\n'web_scrape': crawl web và báo cáo\n'auto_action': tự động chạy script"
+                },
+                "url": {
+                    "type": "string",
+                    "description": "URL cần crawl (chỉ dùng khi action_type='web_scrape')"
+                },
+                "instruction": {
+                    "type": "string",
+                    "description": "Hướng dẫn tóm tắt nội dung"
+                },
+                "prompt": {
+                    "type": "string",
+                    "description": "Prompt tùy chỉnh cho auto_action"
+                },
+                "schedule_id": {
+                    "type": "string",
+                    "description": "ID lịch cần xóa (dùng cho delete)"
+                },
+                "platform": {
+                    "type": "string",
+                    "enum": ["discord", "telegram"],
+                    "description": "Nền tảng: discord hoặc telegram (mặc định discord)"
+                }
+            }
+        }
+    }
+}
+
+
 def handle_schedule_tool(args, user_id):
     action = args.get("action")
 
@@ -141,9 +212,11 @@ def handle_schedule_tool(args, user_id):
         url = args.get("url", "")
         instruction = args.get("instruction", "")
         prompt = args.get("prompt", "")
-        return f"PARSED | title={title} | hour={hour} | minute={minute} | type={type_} | action_type={atype} | url={url} | instruction={instruction} | prompt={prompt} | pending"
+        platform = args.get("platform", "discord")
+        return f"PARSED | title={title} | hour={hour} | minute={minute} | type={type_} | action_type={atype} | url={url} | instruction={instruction} | prompt={prompt} | platform={platform} | pending"
 
     elif action == "confirm_add":
+        platform = args.get("platform", "discord")
         sched = add_schedule(
             user_id=user_id,
             title=args.get("title", "Nhắc nhở"),
@@ -155,9 +228,10 @@ def handle_schedule_tool(args, user_id):
                 "url": args.get("url", ""),
                 "instruction": args.get("instruction", ""),
                 "prompt": args.get("prompt", "")
-            }
+            },
+            platform=platform
         )
-        return f"✅ Đã lưu lịch nhắc nhở **{sched['title']}** lúc {sched['hour']:02d}:{sched['minute']:02d} ({sched['type']}). Dữ liệu đã được lưu vào file Excel để tiện theo dõi."
+        return f"✅ Đã lưu lịch nhắc nhở **{sched['title']}** lúc {sched['hour']:02d}:{sched['minute']:02d} ({sched['type']})."
 
     elif action == "cancel_add":
         return "❌ Đã hủy, không lưu lịch nào."
@@ -202,20 +276,18 @@ def _safe_print(text):
         sys.stdout.buffer.flush()
 
 
-def execute_due_schedules(report_func=_safe_print):
+def execute_due_schedules(report_func=_safe_print, platform=None):
     """
     Kiểm tra và thực thi các schedule đến giờ.
-    report_func: callback nhận text để hiển thị (print cho CLI, send_message cho Discord)
+    report_func: callback nhận text
+    platform: lọc theo nền tảng ("discord", "telegram", None = tất cả)
     Trả về số lượng schedule đã xử lý.
     """
     now = datetime.now(VN_TZ)
-    due = get_due_schedules(now.hour, now.minute)
+    due = get_due_schedules(now.hour, now.minute, platform=platform)
     count = 0
 
     for sched in due:
-        if not sched.get("enabled", True):
-            continue
-
         action = sched.get("action", {})
         atype = action.get("type", "reminder")
 
@@ -260,3 +332,57 @@ def execute_due_schedules(report_func=_safe_print):
             delete_schedule(sched["id"])
 
     return count
+
+
+def get_due_reports(platform="discord"):
+    """
+    Lấy danh sách (user_id, text) cho các schedule đến giờ.
+    Xử lý luôn web_scrape (crawl + summarize) và xóa once.
+    """
+    now = datetime.now(VN_TZ)
+    due = get_due_schedules(now.hour, now.minute, platform=platform)
+    reports = []
+
+    for sched in due:
+        action = sched.get("action", {})
+        atype = action.get("type", "reminder")
+        text = ""
+
+        try:
+            if atype == "reminder":
+                text = f"⏰ **Nhắc nhở:** {sched['title']}"
+
+            elif atype == "web_scrape":
+                url = action.get("url", "")
+                instruction = action.get("instruction", "Tóm tắt nội dung")
+                from modules.tools.tool_searchs import web_crawl_data
+                docs = web_crawl_data([url])
+                raw_text = " ".join(d.page_content for d in docs)
+                if len(raw_text) > 8000:
+                    raw_text = raw_text[:8000]
+
+                summary_prompt = f"{instruction}\n\nNội dung:\n{raw_text}"
+                from modules.core.call_api_llm import call_chat_api
+                import modules.config.config as cfg
+                resp = call_chat_api(
+                    model=cfg.MODEL_NAME,
+                    messages=[{"role": "user", "content": summary_prompt}],
+                    stream=False
+                )
+                summary = ""
+                if "message" in resp:
+                    summary = resp["message"].get("content", "")
+                elif "choices" in resp and resp["choices"]:
+                    summary = resp["choices"][0].get("message", {}).get("content", "")
+
+                text = f"📊 **Báo cáo {sched['title']}:**\n{summary[:2000]}"
+        except Exception as e:
+            text = f"[ERROR] Lỗi khi xử lý {sched['title']}: {str(e)[:200]}"
+
+        if text:
+            reports.append((sched["user_id"], text))
+
+        if sched.get("type") == "once":
+            delete_schedule(sched["id"])
+
+    return reports
