@@ -1,11 +1,22 @@
-from urllib.parse import urlparse, parse_qs, unquote
+from urllib.parse import urlparse, parse_qs, unquote, urlencode
 from bs4 import BeautifulSoup
 
 
 def _clean_url(url: str) -> str:
+    parsed = urlparse(url)
+    qs = parse_qs(parsed.query)
+    # Bing tracking: /ck/a?...&u=base64(real_url)
+    if parsed.path.startswith("/ck/"):
+        raw = qs.get("u") or qs.get("uddg") or qs.get("ru") or qs.get("href") or []
+        if raw:
+            return unquote(raw[0])
+        # Try to extract from adlt/stuff
+        for key in qs:
+            val = qs[key][0]
+            if val.startswith("http"):
+                return unquote(val)
+    # Bing redirect: /l/? , /lk/? , /d/
     if url.startswith("/l/?") or url.startswith("/lk/?") or url.startswith("/d/"):
-        parsed = urlparse(url)
-        qs = parse_qs(parsed.query)
         raw = qs.get("uddg") or qs.get("ru") or qs.get("href") or []
         if raw:
             return unquote(raw[0])
@@ -21,7 +32,7 @@ def parse_bing(html: str, max_results: int) -> list:
         if link_el:
             results.append({
                 "title": link_el.get_text(strip=True),
-                "url": link_el.get("href", ""),
+                "url": _clean_url(link_el.get("href", "")),
                 "description": snippet.get_text(strip=True) if snippet else "",
             })
         if len(results) >= max_results:

@@ -3,16 +3,11 @@ import os
 import uuid
 from datetime import datetime
 
-import pandas as pd
 import pytz
 
 VN_TZ = pytz.timezone("Asia/Ho_Chi_Minh")
 
 SCHEDULE_FILE = "storage/schedules/schedules.json"
-SCHEDULE_XLSX_FILE = "storage/schedules/schedules.xlsx"
-
-PENDING_KEY = "pending_schedule"
-
 
 def _ensure_file():
     os.makedirs(os.path.dirname(SCHEDULE_FILE), exist_ok=True)
@@ -30,38 +25,10 @@ def load_schedules():
         return []
 
 
-def save_schedules_to_xlsx(schedules):
-    if not schedules:
-        return
-    try:
-        rows = []
-        for s in schedules:
-            action = s.get("action", {})
-            rows.append({
-                "ID": s["id"],
-                "User ID": s["user_id"],
-                "Tiêu đề": s["title"],
-                "Giờ": f"{int(s['hour']):02d}:{int(s['minute']):02d}",
-                "Loại": "Hàng ngày" if s["type"] == "daily" else "Một lần",
-                "Hành động": "Nhắc nhở" if action.get("type") == "reminder" else "Crawl web" if action.get("type") == "web_scrape" else "Tác vụ tự động",
-                "URL": action.get("url", ""),
-                "Hướng dẫn": action.get("instruction", "") or action.get("prompt", ""),
-                "Kích hoạt": "Có" if s.get("enabled", True) else "Không",
-                "Tạo lúc": s.get("created_at", "")
-            })
-        df = pd.DataFrame(rows)
-        os.makedirs(os.path.dirname(SCHEDULE_XLSX_FILE), exist_ok=True)
-        df.to_excel(SCHEDULE_XLSX_FILE, index=False, sheet_name="Lịch nhắc nhở")
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).warning(f"Lỗi khi lưu Excel: {e}")
-
-
 def save_schedules(schedules):
     _ensure_file()
     with open(SCHEDULE_FILE, "w", encoding="utf-8") as f:
         json.dump(schedules, f, ensure_ascii=False, indent=2)
-    save_schedules_to_xlsx(schedules)
 
 
 def add_schedule(user_id, title, hour, minute, type_, action, platform="discord"):
@@ -70,10 +37,14 @@ def add_schedule(user_id, title, hour, minute, type_, action, platform="discord"
         hour = int(hour)
     except (TypeError, ValueError):
         hour = 0
+    else:
+        hour = max(0, min(23, hour))
     try:
         minute = int(minute)
     except (TypeError, ValueError):
         minute = 0
+    else:
+        minute = max(0, min(59, minute))
     sched = {
         "id": str(uuid.uuid4()),
         "user_id": user_id,

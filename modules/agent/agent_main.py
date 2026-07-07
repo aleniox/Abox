@@ -131,6 +131,11 @@ def _execute_tool(tool_name: str, action: str, params: dict, user_id: int, platf
 
     try:
         if tool_name == "schedule_reminder":
+            if action not in ("add", "list", "delete"):
+                if params.get("schedule_id"):
+                    action = "delete"
+                elif params.get("title") or params.get("hour") is not None:
+                    action = "add"
             all_args["action"] = action
             all_args["platform"] = platform
             result = handle_schedule_tool(all_args, user_id)
@@ -142,9 +147,9 @@ def _execute_tool(tool_name: str, action: str, params: dict, user_id: int, platf
                 lower_bound=params.get("lower_bound"), upper_bound=params.get("upper_bound"))
 
         elif tool_name == "search_web":
-            contexts = web_search(query=params.get("query", ""))
+            query = params.get("query") or action or ""
+            contexts = web_search(query=query)
             result = contexts[1]
-
 
         elif tool_name == "generate_image":
             img_path = call_api_generate_image(params)
@@ -159,10 +164,10 @@ def _execute_tool(tool_name: str, action: str, params: dict, user_id: int, platf
             result = handle_expense_tool(args=all_args)
 
         elif tool_name == "crawl4ai":
-            raw_content = crawl_web(url=params.get("url", ""))
+            raw_content = crawl_web(url=params.get("url", "") or action or "")
             if raw_content:
                 cleaned = clean_excessive_newlines(raw_content)
-                result = cleaned[:15000] + "\n...[Nội dung đã bị cắt bớt do quá dài]" if len(cleaned) > 15000 else cleaned
+                result = cleaned
             else:
                 result = "Không lấy được dữ liệu từ URL."
 
@@ -175,13 +180,13 @@ def _execute_tool(tool_name: str, action: str, params: dict, user_id: int, platf
         result = f"Lỗi khi chạy tool {tool_name}: {str(e)}"
 
     result_str = str(result)
-    logger.info(f"[TOOL] Kết quả: {result_str[:200]}")
+    logger.info(f"[TOOL] Kết quả: {result_str}")
 
     # Save to CONTEXT
     CONTEXT.setdefault(user_id, []).append({
         "tool": tool_name,
         "action": action,
-        "result": result_str[:500],
+        "result": result_str,
         "time": datetime.now().isoformat()
     })
 
@@ -195,10 +200,22 @@ def _brain_process(user_message: str, user_id: int,
                    platform: str = "discord") -> Tuple[str, Optional[str]]:
     logger.info(f"[BRAIN] === START === user_id={user_id} | message={user_message[:100]} | images={len(image_paths or [])}")
 
-    system_content = BRAIN_SYSTEM
-    if context_str:
-        system_content += "\n\n" + context_str
-        logger.info(f"[BRAIN] Có context ({len(context_str)} chars)")
+    # Build history string
+    history_str = ""
+    if chat_history:
+        lines = []
+        for m in chat_history[-6:]:
+            role = m.get("role", "unknown")
+            content = (m.get("content", "") or "")[:300]
+            lines.append(f'<message role="{role}">\n{content}\n</message>')
+        if lines:
+            history_str = "\n".join(lines)
+
+    system_content = BRAIN_SYSTEM.format(
+        time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        history=history_str,
+        context=context_str or ""
+    )
     if task_context:
         system_content += "\n\n" + task_context
         logger.info(f"[BRAIN] Có task_context ({len(task_context)} chars)")
@@ -206,30 +223,31 @@ def _brain_process(user_message: str, user_id: int,
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     content = f"[{now}] (user_id={user_id}) {user_message.strip()}"
 
-    if image_paths:
-        content_parts = [{"type": "text", "text": content}]
-        for img_path in image_paths:
-            b64 = _encode_image(img_path)
-            if b64:
-                ext = Path(img_path).suffix.lstrip(".") or "png"
-                content_parts.append({
-                    "type": "image_url",
-                    "image_url": {"url": f"data:image/{ext};base64,{b64}"}
-                })
-        messages = [{"role": "system", "content": system_content},
-                    {"role": "user", "content": content_parts}]
-    else:
-        messages = [{"role": "system", "content": system_content},
-                    {"role": "user", "content": content}]
-
     generated_image = None
     tools_called = False
     last_tool_name = ""
     last_tool_result = ""
-    prev_calls: List[Tuple[str, str]] = []  # (tool_name, input) để phát hiện lặp
+    prev_calls: List[Tuple[str, str]] = []
+    running_results = ""
 
-    for attempt in range(3):
-        logger.info(f"[BRAIN] Attempt {attempt + 1}/3 — gọi LLM")
+    def _build_messages(system: str, user: str, images: list, results: str):
+        sys_content = system
+        if results:
+            sys_content += "\n\n<running_results>\n" + results.strip()[-55000:] + "\n</running_results>"
+        if images:
+            parts = [{"type": "text", "text": user}]
+            for img_path in images:
+                b64 = _encode_image(img_path)
+                if b64:
+                    ext = Path(img_path).suffix.lstrip(".") or "png"
+                    parts.append({"type": "image_url", "image_url": {"url": f"data:image/{ext};base64,{b64}"}})
+            return [{"role": "system", "content": sys_content}, {"role": "user", "content": parts}]
+        return [{"role": "system", "content": sys_content}, {"role": "user", "content": user}]
+
+    messages = _build_messages(system_content, content, image_paths or [], running_results)
+
+    for attempt in range(10):
+        logger.info(f"[BRAIN] Attempt {attempt + 1}/10 — gọi LLM")
         try:
             data = call_api_llm.call_chat_api(
                 model=config.MODEL_NAME, messages=messages, stream=False)
@@ -257,8 +275,8 @@ def _brain_process(user_message: str, user_id: int,
         next_action = parsed.get("next_action", "")
 
         if next_action == "answer":
-            answer_text = parsed.get("input", "") or parsed.get("reason", "") or raw_text
-            logger.info(f"[BRAIN] Nhận answer, input={answer_text[:100]}")
+            answer_text = parsed.get("output") or parsed.get("input") or parsed.get("reason") or raw_text
+            logger.info(f"[BRAIN] Nhận answer, output={answer_text}")
             return answer_text, generated_image
 
         if not next_action:
@@ -275,6 +293,11 @@ def _brain_process(user_message: str, user_id: int,
         last_tool_name = next_action
         last_tool_result = result_text
 
+        # Accumulate result into system prompt for next loop
+        result_short = result_text
+        running_results += f'\n  <result tool="{next_action}" input="{input_val}">\n    {result_short}\n  </result>'
+        messages = _build_messages(system_content, content, image_paths or [], running_results)
+        print(messages)
         # Phát hiện lặp: nếu tool+input giống hệt lần trước -> dừng
         call_key = (next_action, input_val)
         if prev_calls and prev_calls[-1] == call_key:
@@ -282,10 +305,7 @@ def _brain_process(user_message: str, user_id: int,
             return _wrap_brain_output(tools_called, last_tool_name, last_tool_result, f"[Kết quả từ tool {next_action}]: {result_text}"), generated_image
         prev_calls.append(call_key)
 
-        # Add result to messages for next iteration
-        messages.append({"role": "system", "content": f"[TOOL_RESULT] {next_action}: {result_text}"})
-
-    logger.warning("[BRAIN] Hết 3 lần thử, trả về fallback")
+    logger.warning("[BRAIN] Hết 10 lần thử, trả về fallback")
     return _wrap_brain_output(tools_called, last_tool_name, last_tool_result, "Quá số lần xử lý."), generated_image
 
 
@@ -323,13 +343,15 @@ def _responder_cycle(brain_result: str, user_id: int,
     logger.info(f"[RESPONDER] === START === user_id={user_id}")
     logger.info(f"[RESPONDER] Brain result ({len(brain_result)} chars): {brain_result[:150]}")
     _load_history(user_id)
+    # HISTORY.append({"role": "system", "content": f"[BRAIN_RESULT] {brain_result}"})
+    messages = HISTORY + [{"role": "system", "content": f"[BRAIN_RESULT] {brain_result}"}]
+    messages.append({"role": "user", "content": original_message.strip()})
     HISTORY.append({"role": "user", "content": original_message.strip()})
-    HISTORY.append({"role": "system", "content": f"[BRAIN_RESULT] {brain_result}"})
 
     try:
         logger.info("[RESPONDER] Gọi LLM để stylize câu trả lời...")
         data = call_api_llm.call_chat_api(
-            model=config.MODEL_NAME, messages=HISTORY, stream=False)
+            model=config.MODEL_NAME, messages=messages, stream=False)
     except Exception as e:
         logger.error(f"[RESPONDER] LLM call failed: {e}")
         HISTORY.pop()
@@ -345,8 +367,6 @@ def _responder_cycle(brain_result: str, user_id: int,
     logger.info(f"[RESPONDER] Trả về ({len(content)} chars): {content[:150]}")
     if content:
         HISTORY.append({"role": "assistant", "content": content})
-    if len(HISTORY) > config.MAX_TOKEN_CHAT // 2:
-        HISTORY[:] = [HISTORY[0]] + HISTORY[-(config.MAX_TOKEN_CHAT // 2 - 1):]
     _save_history()
     return content
 
@@ -368,6 +388,7 @@ def process_message(message: str, user_id: int, channel=None,
 
     # Phase 1: Brain (với context từ các hành động trước)
     context = _get_recent_context(user_id)
+    raw_history = memory.load_chat_history()
     logger.info("[MAIN] Phase 1: BRAIN — bắt đầu xử lý tool...")
     brain_result, generated_image = _brain_process(message, user_id, image_paths, context_str=context, task_context=task_context, platform=platform)
     logger.info(f"[MAIN] Phase 1: BRAIN — kết quả: ({len(brain_result)} chars) {brain_result[:200]}")
