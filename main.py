@@ -16,27 +16,9 @@ async def run_discord():
     await run_bot()
 
 
-async def run_telegram():
-    from bots.telegram.bot import run_telegram as tg_run
-    logger.info("Starting Telegram bot...")
-    await tg_run()
-
-
 async def main():
-    logger.info("Starting both bots...")
-
-    tasks = [
-        asyncio.create_task(run_discord()),
-        asyncio.create_task(run_telegram()),
-    ]
-
-    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_EXCEPTION)
-    for task in done:
-        exc = task.exception()
-        if exc:
-            logger.error(f"Bot failed: {exc}")
-    for task in pending:
-        task.cancel()
+    logger.info("Starting Discord bot...")
+    await run_discord()
 
 
 if __name__ == "__main__":

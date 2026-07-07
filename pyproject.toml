@@ -1,7 +1,7 @@
 [project]
 name = "abox"
 version = "0.1.0"
-description = "Add your description here"
+description = "Đây là một dự án Bot "
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
