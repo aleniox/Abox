@@ -3,12 +3,13 @@ import json
 import logging
 import os
 import re
+import socket
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 
-from modules.agent.agent_main import process_message, SEARCH_RESULTS, _responder_cycle
+from modules.agent.agent_main import process_message, SEARCH_RESULTS
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,23 @@ async def index():
         return HTMLResponse(f.read())
 
 
+@app.get("/favicon.ico")
+async def favicon():
+    return Response(status_code=204)
+
+
+# Suppress Windows Proactor ConnectionResetError on WS disconnect
+def _suppress_ws_reset(loop, context):
+    exc = context.get("exception")
+    if isinstance(exc, (ConnectionResetError, ConnectionAbortedError)):
+        return
+    loop.default_exception_handler(context)
+
+
+loop = asyncio.get_event_loop()
+loop.set_exception_handler(_suppress_ws_reset)
+
+
 @app.websocket("/ws/chat")
 async def websocket_chat(ws: WebSocket):
     await ws.accept()
@@ -32,7 +50,10 @@ async def websocket_chat(ws: WebSocket):
 
     try:
         while True:
-            raw = await ws.receive_text()
+            try:
+                raw = await ws.receive_text()
+            except (WebSocketDisconnect, ConnectionResetError, RuntimeError):
+                break
             data = json.loads(raw)
             msg = data.get("message", "").strip()
             if not msg:
@@ -45,7 +66,7 @@ async def websocket_chat(ws: WebSocket):
             loop = asyncio.get_event_loop()
             try:
                 result = await loop.run_in_executor(
-                    None, _responder_cycle, msg, 1, None, msg
+                    None, process_message, msg, 1, None, None, None, "", "webui"
                 )
                 raw_text = result if isinstance(result, str) else result.get("text", str(result))
                 match = re.search(r'\{.*\}', raw_text, re.DOTALL)

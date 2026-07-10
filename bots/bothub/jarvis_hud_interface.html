@@ -43,9 +43,6 @@
                     <span>W  ·  240  ·  255  ·  <span class="text-white font-bold glow-green">[NW]</span>  ·  300  ·  315  ·  N</span>
                 </div>
                 <div class="text-right flex items-center gap-4">
-                    <button onclick="toggleHoloBrowser()" class="text-[10px] bg-green-950/60 border border-green-500/40 px-2 py-0.5 rounded text-green-300 hover:bg-green-500 hover:text-black transition-all">
-                        <i class="fa-solid fa-window-restore"></i> WEB PORTAL
-                    </button>
                     <span class="text-xs font-bold" id="clock-single">12:00:00</span>
                 </div>
             </div>
@@ -98,75 +95,76 @@
                 </div>
             </div>
 
-            <!-- FLOATING HOLOGRAPHIC WEB PORTAL PANEL (SINGLE VIEW - MOVED TO BOTTOM RIGHT FOR DRIVING SAFETY) -->
-            <div id="singleHoloBrowser" class="absolute bottom-24 right-6 w-[360px] h-[240px] holo-browser rounded-lg flex flex-col overflow-hidden hidden z-30 transition-all duration-300 shadow-[0_0_20px_rgba(0,255,136,0.15)]">
-                <div class="bg-green-950/90 px-3 py-1.5 border-b border-green-500/30 flex justify-between items-center text-[10px]">
-                    <span class="title-font text-green-300 font-bold"><i class="fa-solid fa-globe"></i> HOLOGRAPHIC WEB PORTAL</span>
-                    <div class="flex gap-1.5">
-                        <button onclick="setBrowserMode('ai')" id="btn-mode-ai-single" class="px-1.5 py-0.5 rounded bg-green-400 text-black font-bold">AI</button>
-                        <button onclick="setBrowserMode('web')" id="btn-mode-web-single" class="px-1.5 py-0.5 rounded border border-green-500/40 text-green-400">WEB</button>
-                        <button onclick="toggleHoloBrowser()" class="text-red-400 hover:text-red-500"><i class="fa-solid fa-circle-xmark"></i></button>
+            <!-- FLOATING HOLOGRAPHIC WEB PORTAL PANEL (auto-open on web search) -->
+            <div id="singleHoloBrowser" class="absolute top-20 right-4 w-[500px] h-[600px] holo-browser rounded-lg hidden flex flex-col overflow-hidden z-40 transition-all duration-300">
+                <div class="px-3 py-2 border-b border-green-500/20 flex justify-between items-center text-xs bg-green-950/20">
+                    <span class="title-font text-green-300/80 font-bold tracking-wider"><i class="fa-solid fa-globe"></i> HOLOGRAPHIC WEB PORTAL</span>
+                    <div class="flex gap-1.5 items-center">
+                        <button onclick="setBrowserMode('ai')" id="btn-mode-ai-single" class="px-2 py-1 rounded bg-green-400/80 text-black font-bold text-[10px]">AI</button>
+                        <button onclick="setBrowserMode('web')" id="btn-mode-web-single" class="px-2 py-1 rounded border border-green-500/30 text-green-300/70 text-[10px]">WEB</button>
                     </div>
                 </div>
-                <div class="flex-1 p-2 flex flex-col bg-black/70 min-h-0">
-                    <!-- Input Address/Search Bar -->
-                    <div class="flex gap-1 mb-1.5">
-                        <input type="text" id="browserUrlSingle" placeholder="Nhập từ khóa tìm kiếm AI hoặc Link Web..." class="flex-1 bg-green-950/80 border border-green-500/30 rounded px-2 py-1 text-[10px] text-green-300 focus:outline-none focus:border-green-400 font-mono">
-                        <button onclick="executeBrowserSearch('single')" class="px-2 py-1 bg-green-500 text-black rounded text-[10px] font-bold uppercase hover:bg-green-400">Tải</button>
+                <div class="flex-1 p-3 flex flex-col min-h-0">
+                    <div class="flex gap-2 mb-2">
+                        <input type="text" id="browserUrlSingle" placeholder="Tìm kiếm hoặc nhập URL..." class="flex-1 bg-green-950/40 border border-green-500/20 rounded px-3 py-1.5 text-xs text-green-300/80 placeholder-green-500/40 focus:outline-none focus:border-green-400/50 font-mono">
+                        <button onclick="executeBrowserSearch('single')" class="px-3 py-1.5 bg-green-500/60 text-black rounded text-xs font-bold uppercase hover:bg-green-400/80">Tải</button>
                     </div>
-                    
-                    <!-- Display Areas -->
-                    <div class="flex-1 relative rounded overflow-hidden border border-green-500/20 min-h-0">
-                        <!-- AI Search grounded result -->
-                        <div id="browserAiContentSingle" class="absolute inset-0 p-2 overflow-y-auto text-[9px] leading-relaxed text-green-300 font-sans space-y-2 no-scrollbar">
-                            <div class="text-center text-green-500/60 mt-8">
-                                <i class="fa-solid fa-compass-drafting text-2xl block mb-1"></i>
-                                Nhập từ khóa để J.A.R.V.I.S. quét mạng dữ liệu toàn cầu.
+                    <div class="flex-1 relative rounded overflow-hidden min-h-0">
+                        <div id="browserAiContentSingle" class="absolute inset-0 p-2 overflow-y-auto text-xs leading-relaxed text-green-300/80 font-sans space-y-2 no-scrollbar">
+                            <div class="text-center text-green-500/40 mt-10">
+                                <i class="fa-solid fa-compass-drafting text-2xl block mb-2"></i>
+                                J.A.R.V.I.S. sẵn sàng.
                             </div>
                         </div>
-                        <!-- Web iframe fallback -->
-                        <iframe id="browserIframeSingle" class="absolute inset-0 w-full h-full border-none hidden bg-white"></iframe>
+                        <iframe id="browserIframeSingle" class="absolute inset-0 w-full h-full border-none hidden bg-white/10"></iframe>
                     </div>
                 </div>
             </div>
 
-            <!-- Footer Controls & Subtitles Group -->
-            <div class="w-full flex flex-col gap-3 mt-auto z-20">
-                <!-- Footer: Subtitle / Speech responses -->
-                <div class="w-full vr-panel p-3 rounded-lg border border-green-500/30 flex items-center justify-between text-xs min-h-12">
-                    <div class="flex items-center gap-3">
-                        <span class="text-green-400 font-bold tracking-wider">[J.A.R.V.I.S.]:</span>
-                        <span id="subtitle-single" class="text-green-200 holo-text">Giao thức AR/VR đã sẵn sàng. Hãy bấm vào "KÍCH HOẠT CAMERA" bên dưới để xuyên thấu thế giới thực.</span>
-                    </div>
-                    <div class="text-[10px] text-green-500/60 font-mono">STARKLING MARK-85</div>
+            <!-- LEFT SIDE CONTROL BAR (ICON BUTTONS) -->
+            <div id="sideControls" class="absolute right-2 top-14 z-50 flex flex-col gap-2.5 items-center">
+                <button onclick="toggleHoloBrowser()" class="w-9 h-9 rounded-lg border border-green-500/40 bg-green-950/60 flex items-center justify-center text-green-300 hover:bg-green-500 hover:text-black transition-all" title="Web Portal">
+                    <i class="fa-solid fa-window-restore text-xs"></i>
+                </button>
+                <button onclick="toggleWebcam()" id="btnCamSide" class="w-9 h-9 rounded-lg border border-green-400 bg-green-950/50 flex items-center justify-center text-green-400 hover:bg-green-400 hover:text-black transition-all" title="Kích hoạt Camera">
+                    <i class="fa-solid fa-camera text-xs"></i>
+                </button>
+                <button onclick="toggleFaceTracking()" id="btnSwitchCamSide" class="hidden w-9 h-9 rounded-lg border border-cyan-400 bg-cyan-950/50 flex items-center justify-center text-cyan-400 hover:bg-cyan-400 hover:text-black transition-all" title="Quét Khuôn Mặt">
+                    <i class="fa-solid fa-eye text-xs"></i>
+                </button>
+                <button onclick="toggleVRMode()" class="w-9 h-9 rounded-lg border border-amber-500 bg-amber-950/40 flex items-center justify-center text-amber-400 hover:bg-amber-500 hover:text-black transition-all" title="Kính VR (SBS)">
+                    <i class="fa-solid fa-vr-cardboard text-xs"></i>
+                </button>
+                <button onclick="toggleSound()" id="btnMuteSide" class="w-9 h-9 rounded-lg border border-green-500/30 bg-green-950/30 flex items-center justify-center text-green-400 hover:bg-green-500/20 transition-all" title="Âm thanh">
+                    <i class="fa-solid fa-volume-high text-xs"></i>
+                </button>
+                <button onclick="toggleWakeMode()" id="btnWake" class="w-9 h-9 rounded-lg border border-green-500/30 bg-green-950/30 flex items-center justify-center text-green-400 hover:bg-green-500/20 transition-all" title="Wake — Nói 'Jarvis' để ra lệnh">
+                    <i class="fa-solid fa-ear-listen text-xs"></i>
+                </button>
+                <button onclick="triggerVoiceInput()" id="btnMicSide" class="w-9 h-9 rounded-lg border border-green-500/50 bg-green-950/40 flex items-center justify-center text-green-400 hover:bg-green-500 hover:text-black transition-all" title="Ra Lệnh Giọng Nói">
+                    <i class="fa-solid fa-microphone text-xs"></i>
+                </button>
+            </div>
+
+            <!-- J.A.R.V.I.S. SUBTITLE PANEL (top-left, scale-to-fit, scroll if long) -->
+            <div id="subtitlePanel" class="absolute top-14 left-2 z-40 max-w-xs max-h-32 overflow-y-auto rounded-lg border border-green-500/30 bg-green-950/70 backdrop-blur-sm p-2.5 text-xs leading-relaxed">
+                <div class="flex gap-2">
+                    <span class="text-green-400 font-bold tracking-wider shrink-0">[J.A.R.V.I.S.]:</span>
+                    <span id="subtitle-single" class="text-green-200 holo-text">Giao thức AR/VR đã sẵn sàng.</span>
                 </div>
+            </div>
 
-                <!-- QUICK CONTROLS OVERLAY -->
+            <!-- Footer Controls & Input Group -->
+            <div class="w-full flex flex-col gap-3 mt-auto z-20">
+                <!-- Hidden stubs for JS references -->
                 <div class="flex justify-center gap-2 flex-wrap">
-                    <!-- Camera Pass-through Activation -->
-                    <button onclick="toggleWebcam()" id="btnCam" class="px-3 py-1.5 rounded border border-green-400 bg-green-950/50 hover:bg-green-400 hover:text-black transition-all text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 shadow-[0_0_10px_rgba(0,255,136,0.15)]">
-                        <i class="fa-solid fa-camera"></i> Kích Hoạt Camera
-                    </button>
-
-                    <!-- Toggle Face Scan PIP -->
-                    <button onclick="toggleFaceTracking()" id="btnSwitchCam" class="hidden px-3 py-1.5 rounded border border-cyan-400 bg-cyan-950/50 text-cyan-400 hover:bg-cyan-400 hover:text-black transition-all text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
-                        <i class="fa-solid fa-eye"></i> Quét Khuôn Mặt
-                    </button>
-
-                    <!-- VR Mode SBS Dual-Eye Toggle -->
-                    <button onclick="toggleVRMode()" id="btnVR" class="px-3 py-1.5 rounded border border-amber-500 bg-amber-950/40 text-amber-400 hover:bg-amber-500 hover:text-black transition-all text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
-                        <i class="fa-solid fa-vr-cardboard"></i> Kính VR (Chế độ SBS)
-                    </button>
-
-                    <!-- Custom Voice Command Trigger -->
-                    <button onclick="triggerVoiceInput()" id="btnMic" class="px-3 py-1.5 rounded border border-green-500/50 bg-green-950/40 text-green-400 hover:bg-green-500 hover:text-black transition-all text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
-                        <i class="fa-solid fa-microphone"></i> Ra Lệnh Giọng Nói
-                    </button>
-
-                    <!-- Sound toggle -->
-                    <button onclick="toggleSound()" id="btnMute" class="w-9 h-9 rounded border border-green-500/30 flex items-center justify-center bg-green-950/30 hover:bg-green-500/20 text-green-400 transition-all text-xs">
-                        <i class="fa-solid fa-volume-high"></i>
-                    </button>
+                    <div class="hidden">
+                        <button id="btnMic"></button>
+                        <button id="btnCam"></button>
+                        <button id="btnSwitchCam"></button>
+                        <button id="btnVR"></button>
+                        <button id="btnMute"></button>
+                    </div>
                 </div>
 
                 <!-- FLOATING TEXT INPUT AREA FOR AI CONVERSATIONS -->

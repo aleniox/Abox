@@ -71,10 +71,11 @@ body {
 }
 
 .vr-panel {
-    background: rgba(0, 20, 10, 0.12);
+    background: rgba(0, 20, 10, 0.08);
     border: 1px solid rgba(0, 255, 136, 0.2);
     border-left: 4px solid rgba(0, 255, 136, 0.85);
-    backdrop-filter: blur(3px);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     box-shadow: 0 0 15px rgba(0, 255, 136, 0.05), inset 0 0 10px rgba(0, 255, 136, 0.05);
 }
 
@@ -87,9 +88,11 @@ body {
 }
 
 .holo-browser {
-    background: rgba(1, 12, 8, 0.7);
-    border: 1px solid rgba(0, 255, 136, 0.4);
-    box-shadow: 0 0 15px rgba(0, 255, 136, 0.2), inset 0 0 10px rgba(0, 255, 136, 0.1);
+    background: rgba(1, 12, 8, 0.25);
+    border: 1px solid rgba(0, 255, 136, 0.3);
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.15), inset 0 0 15px rgba(0, 255, 136, 0.05);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
 #arWebcam {

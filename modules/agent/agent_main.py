@@ -157,6 +157,11 @@ def _execute_tool(tool_name: str, action: str, params: dict, user_id: int, platf
         elif tool_name == "crawl4ai":
             raw_content = crawl_web(url=params.get("url", "") or action or "")
             result = clean_excessive_newlines(raw_content) if raw_content else "Không lấy được dữ liệu từ URL."
+            SEARCH_RESULTS[user_id] = [{
+                "url": params.get("url", "") or action or "",
+                "title": f"Trang web: {params.get('url', '') or action or ''}",
+                "description": result[:300]
+            }]
 
         else:
             result = f"Tool không hỗ trợ: {tool_name}"
@@ -182,7 +187,7 @@ def _execute_tool(tool_name: str, action: str, params: dict, user_id: int, platf
 def _build_messages(system: str, user: str, images: list, results: str):
     sys_content = system
     if results:
-        sys_content += "\n\n<running_results>\n" + results.strip()[-55000:] + "\n</running_results>"
+        sys_content += "\n\n<running_results>\n" + results.strip()[-5000:] + "\n</running_results>"
     if images:
         parts = [{"type": "text", "text": user}]
         for img_path in images:

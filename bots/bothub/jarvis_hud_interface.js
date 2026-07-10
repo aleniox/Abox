@@ -83,8 +83,9 @@ let isBrowserOpen = false;
 let browserMode = 'ai';
 let currentBrowserUrl = 'https://vi.m.wikipedia.org';
 
-function toggleHoloBrowser() {
-    isBrowserOpen = !isBrowserOpen;
+function toggleHoloBrowser(forceState) {
+    console.log("[TOGGLE] forceState:", forceState, "was:", isBrowserOpen, "->", forceState !== undefined ? forceState : !isBrowserOpen);
+    isBrowserOpen = forceState !== undefined ? forceState : !isBrowserOpen;
     playSfx('toggle');
 
     const singleBrowser = document.getElementById('singleHoloBrowser');
@@ -93,27 +94,22 @@ function toggleHoloBrowser() {
     const browserR = document.getElementById('browser-R');
     const reticleL = document.getElementById('reticle-L');
     const reticleR = document.getElementById('reticle-R');
+    if (!singleBrowser) return;
 
     if (isBrowserOpen) {
         singleBrowser.classList.remove('hidden');
-        targetReticle.classList.add('opacity-10');
-
-        browserL.classList.remove('hidden');
-        browserR.classList.remove('hidden');
-        reticleL.classList.add('opacity-10');
-        reticleR.classList.add('opacity-10');
-        
-        updateSubtitles("Hệ thống hiển thị đa lớp Holographic Web Viewport đã được khởi tạo.");
+        if (targetReticle) targetReticle.classList.add('opacity-10');
+        if (browserL) browserL.classList.remove('hidden');
+        if (browserR) browserR.classList.remove('hidden');
+        if (reticleL) reticleL.classList.add('opacity-10');
+        if (reticleR) reticleR.classList.add('opacity-10');
     } else {
         singleBrowser.classList.add('hidden');
-        targetReticle.classList.remove('opacity-10');
-
-        browserL.classList.add('hidden');
-        browserR.classList.add('hidden');
-        reticleL.classList.remove('opacity-10');
-        reticleR.classList.remove('opacity-10');
-
-        updateSubtitles("Đóng Holographic Web Viewport. Thu hồi tất cả các mảng cửa sổ AR.");
+        if (targetReticle) targetReticle.classList.remove('opacity-10');
+        if (browserL) browserL.classList.add('hidden');
+        if (browserR) browserR.classList.add('hidden');
+        if (reticleL) reticleL.classList.remove('opacity-10');
+        if (reticleR) reticleR.classList.remove('opacity-10');
     }
 }
 
@@ -211,6 +207,7 @@ async function executeBrowserSearch(viewType) {
 }
 
 function renderSearchResults(results, query) {
+    console.log("[RENDER] Called with", results.length, "results, isBrowserOpen:", isBrowserOpen);
     const html = `<div class="space-y-1 text-[10px]">
         <div class="text-white border-b border-green-400/30 pb-1 uppercase font-bold tracking-wide flex justify-between">
             <span>KẾT QUẢ TÌM KIẾM: ${query}</span>
@@ -312,15 +309,20 @@ function playSfx(type) {
 
 function toggleSound() {
     isMuted = !isMuted;
-    const btn = document.getElementById('btnMute');
-    if (isMuted) {
-        btn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
-        btn.classList.add('text-red-400');
-    } else {
-        btn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
-        btn.classList.remove('text-red-400');
-        playSfx('beep');
-    }
+    const updateSoundBtn = (id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (isMuted) {
+            el.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
+            el.classList.add('text-red-400');
+        } else {
+            el.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+            el.classList.remove('text-red-400');
+        }
+    };
+    updateSoundBtn('btnMute');
+    updateSoundBtn('btnMuteSide');
+    if (!isMuted) playSfx('beep');
 }
 
 async function toggleWebcam() {
@@ -351,6 +353,10 @@ async function toggleWebcam() {
 
         btn.classList.remove('bg-green-400', 'text-black');
         btn.classList.add('text-green-400');
+        const camSide = document.getElementById('btnCamSide');
+        if (camSide) { camSide.classList.remove('bg-green-400', 'text-black'); camSide.classList.add('text-green-400'); }
+        const switchSide = document.getElementById('btnSwitchCamSide');
+        if (switchSide) { switchSide.classList.add('hidden'); switchSide.classList.add('bg-cyan-400', 'text-black'); switchSide.classList.remove('text-cyan-400'); }
         if (btnSwitch) {
             btnSwitch.classList.add('hidden');
             btnSwitch.classList.add('bg-cyan-400', 'text-black');
@@ -412,6 +418,10 @@ async function toggleWebcam() {
 
             btn.classList.add('bg-green-400', 'text-black');
             btn.classList.remove('text-green-400');
+            const camSide2 = document.getElementById('btnCamSide');
+            if (camSide2) { camSide2.classList.add('bg-green-400', 'text-black'); camSide2.classList.remove('text-green-400'); }
+            const switchSide2 = document.getElementById('btnSwitchCamSide');
+            if (switchSide2) { switchSide2.classList.remove('hidden'); switchSide2.classList.add('bg-cyan-400', 'text-black'); switchSide2.classList.remove('text-cyan-400'); }
             if (btnSwitch) {
                 btnSwitch.classList.remove('hidden');
                 btnSwitch.classList.add('bg-cyan-400', 'text-black');
@@ -444,16 +454,23 @@ function toggleFaceTracking() {
     });
 
     const btn = document.getElementById('btnSwitchCam');
-    if (btn) {
+    const syncFaceBtn = (id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
         if (isFaceTrackingActive) {
-            btn.classList.add('bg-cyan-400', 'text-black');
-            btn.classList.remove('text-cyan-400');
-            updateSubtitles("Đã kích hoạt quét gương mặt.");
+            el.classList.add('bg-cyan-400', 'text-black');
+            el.classList.remove('text-cyan-400');
         } else {
-            btn.classList.remove('bg-cyan-400', 'text-black');
-            btn.classList.add('text-cyan-400');
-            updateSubtitles("Đã ẩn khung quét gương mặt.");
+            el.classList.remove('bg-cyan-400', 'text-black');
+            el.classList.add('text-cyan-400');
         }
+    };
+    syncFaceBtn('btnSwitchCam');
+    syncFaceBtn('btnSwitchCamSide');
+    if (isFaceTrackingActive) {
+        updateSubtitles("Đã kích hoạt quét gương mặt.");
+    } else {
+        updateSubtitles("Đã ẩn khung quét gương mặt.");
     }
 }
 
@@ -551,6 +568,16 @@ function playNextAudio() {
         });
 }
 
+let micRecognition = null;
+let micSilenceTimer = null;
+let voiceProcessing = false;
+let wakeMode = false;
+let wakeRecognition = null;
+let wakeRestartCount = 0;
+let wakeRestartTimer = null;
+let wakeSilenceTimer = null;
+let wakeFullText = '';
+
 function triggerVoiceInput() {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
         updateSubtitles("Trình duyệt hoặc thiết bị của bạn không hỗ trợ công cụ Speech Recognition.");
@@ -558,35 +585,185 @@ function triggerVoiceInput() {
     }
 
     const btnMic = document.getElementById('btnMic');
+    const btnMicSide = document.getElementById('btnMicSide');
+
+    // Nếu đang nghe thì stop
+    if (micRecognition) {
+        try { micRecognition.stop(); } catch(e) {}
+        micRecognition = null;
+        if (micSilenceTimer) clearTimeout(micSilenceTimer);
+        btnMic.innerHTML = '<i class="fa-solid fa-microphone"></i> Ra Lệnh Giọng Nói';
+        if (btnMicSide) btnMicSide.innerHTML = '<i class="fa-solid fa-microphone text-xs"></i>';
+        return;
+    }
+
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRec();
-    recognition.lang = 'vi-VN';
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
+    micRecognition = new SpeechRec();
+    micRecognition.lang = 'vi-VN';
+    micRecognition.continuous = true;
+    micRecognition.interimResults = true;
+    micRecognition.maxAlternatives = 1;
 
     playSfx('beep');
+    let finalText = '';
+    let hasResult = false;
 
-    recognition.onstart = () => {
+    micRecognition.onstart = () => {
         btnMic.innerHTML = '<i class="fa-solid fa-microphone text-red-500 animate-pulse"></i> Đang Nghe';
+        if (btnMicSide) btnMicSide.innerHTML = '<i class="fa-solid fa-microphone text-xs text-red-500 animate-pulse"></i>';
         updateSubtitles("J.A.R.V.I.S. đang thu tiếng từ Microphone...");
     };
 
-    recognition.onresult = (event) => {
-        const text = event.results[0][0].transcript;
-        document.getElementById('voiceCommand').value = text;
-        processCommand(text);
+    micRecognition.onresult = (event) => {
+        if (micSilenceTimer) clearTimeout(micSilenceTimer);
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            if (event.results[i].isFinal) {
+                finalText += ' ' + event.results[i][0].transcript;
+                hasResult = true;
+            }
+        }
+        document.getElementById('voiceCommand').value = finalText.trim();
+
+        // Tự động dừng sau 1.5s im lặng
+        micSilenceTimer = setTimeout(() => {
+            if (finalText.trim()) {
+                voiceProcessing = true;
+                processCommand(finalText.trim());
+            }
+            try { micRecognition.stop(); } catch(e) {}
+            micRecognition = null;
+        }, 1500);
     };
 
-    recognition.onerror = () => {
+    micRecognition.onerror = () => {
+        if (micSilenceTimer) clearTimeout(micSilenceTimer);
+        voiceProcessing = false;
+        micRecognition = null;
         btnMic.innerHTML = '<i class="fa-solid fa-microphone"></i> Ra Lệnh Giọng Nói';
-        updateSubtitles("Không phát hiện tín hiệu giọng nói.");
+        if (btnMicSide) btnMicSide.innerHTML = '<i class="fa-solid fa-microphone text-xs"></i>';
+        if (!hasResult) {
+            updateSubtitles("Không phát hiện tín hiệu giọng nói.");
+        }
     };
 
-    recognition.onend = () => {
+    micRecognition.onend = () => {
+        if (micSilenceTimer) clearTimeout(micSilenceTimer);
+        if (!voiceProcessing && finalText.trim()) {
+            document.getElementById('voiceCommand').value = finalText.trim();
+            processCommand(finalText.trim());
+        }
+        voiceProcessing = false;
+        micRecognition = null;
         btnMic.innerHTML = '<i class="fa-solid fa-microphone"></i> Ra Lệnh Giọng Nói';
+        if (btnMicSide) btnMicSide.innerHTML = '<i class="fa-solid fa-microphone text-xs"></i>';
+        if (wakeMode) setTimeout(() => { if (wakeMode) startWakeListening(); }, 500);
     };
 
-    recognition.start();
+    micRecognition.start();
+}
+
+function toggleWakeMode() {
+    wakeMode = !wakeMode;
+    const btn = document.getElementById('btnWake');
+    if (!btn) return;
+    if (wakeMode) {
+        wakeRestartCount = 0;
+        startWakeListening();
+        btn.classList.add('bg-green-500', 'text-black', 'shadow-[0_0_12px_rgba(0,255,136,0.5)]');
+        btn.classList.remove('text-green-400', 'border-green-500/30');
+        const icon = btn.querySelector('i');
+        if (icon) icon.classList.add('animate-pulse');
+        updateSubtitles("Wake mode ON — nói 'Jarvis', 'Luna' hoặc 'Nuna' để ra lệnh.");
+    } else {
+        stopWakeListening();
+        btn.classList.remove('bg-green-500', 'text-black', 'shadow-[0_0_12px_rgba(0,255,136,0.5)]');
+        btn.classList.add('text-green-400');
+        const icon = btn.querySelector('i');
+        if (icon) icon.classList.remove('animate-pulse');
+        if (wakeRestartTimer) { clearTimeout(wakeRestartTimer); wakeRestartTimer = null; }
+        if (wakeSilenceTimer) { clearTimeout(wakeSilenceTimer); wakeSilenceTimer = null; }
+        wakeFullText = '';
+        updateSubtitles("Wake mode OFF.");
+    }
+}
+
+function startWakeListening() {
+    stopWakeListening();
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return;
+    if (wakeRestartCount > 50) {
+        wakeMode = false;
+        toggleWakeMode();
+        updateSubtitles("Wake mode đã tự tắt sau nhiều lần thử lại. Refresh trang để dùng lại.");
+        return;
+    }
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    wakeRecognition = new SpeechRec();
+    wakeRecognition.lang = 'vi-VN';
+    wakeRecognition.continuous = true;
+    wakeRecognition.interimResults = true;
+    wakeRecognition.maxAlternatives = 1;
+
+    const wakeRegex = /(?:hey\s+)?(?:j(?:\.?\s*a\.?\s*r\.?\s*v\.?\s*i\.?\s*s|arvis)|luna|nuna)/i;
+
+    wakeRecognition.onresult = (event) => {
+        wakeRestartCount = 0;
+        if (wakeSilenceTimer) clearTimeout(wakeSilenceTimer);
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            if (event.results[i].isFinal) {
+                wakeFullText += ' ' + event.results[i][0].transcript;
+            }
+        }
+        document.getElementById('voiceCommand').value = wakeFullText.trim();
+
+        wakeSilenceTimer = setTimeout(() => {
+            const text = wakeFullText.trim().toLowerCase();
+            const match = text.match(wakeRegex);
+            if (match) {
+                playSfx('activate');
+                updateSubtitles("J.A.R.V.I.S. đã thức!");
+                wakeRestartCount = 0;
+                stopWakeListening();
+                const afterWake = wakeFullText.slice(match.index + match[0].length).trim();
+                if (afterWake) {
+                    document.getElementById('voiceCommand').value = afterWake;
+                    processCommand();
+                } else {
+                    document.getElementById('voiceCommand').value = '';
+                    setTimeout(() => triggerVoiceInput(), 300);
+                }
+            }
+            wakeFullText = '';
+        }, 1500);
+    };
+
+    const scheduleRestart = () => {
+        wakeRestartCount++;
+        const delay = Math.min(1000 + wakeRestartCount * 500, 10000);
+        wakeRestartTimer = setTimeout(() => {
+            if (wakeMode) startWakeListening();
+        }, delay);
+    };
+
+    wakeRecognition.onerror = () => {
+        wakeRecognition = null;
+        scheduleRestart();
+    };
+
+    wakeRecognition.onend = () => {
+        wakeRecognition = null;
+        scheduleRestart();
+    };
+
+    try { wakeRecognition.start(); } catch(e) { scheduleRestart(); }
+}
+
+function stopWakeListening() {
+    if (wakeRecognition) {
+        try { wakeRecognition.stop(); } catch(e) {}
+        wakeRecognition = null;
+    }
 }
 
 function updateSubtitles(text) {
@@ -629,13 +806,41 @@ function processCommand(customQuery = null) {
     }
 
     updateSubtitles("Đang kết nối J.A.R.V.I.S....");
+
+    const singleHoloEl = document.getElementById('singleHoloBrowser');
+    const isHolVisible = singleHoloEl && !singleHoloEl.classList.contains('hidden');
+
+    if (isHolVisible) {
+        setBrowserMode('ai');
+        const loadingHtml = `<div class="animate-pulse space-y-2 mt-4 text-green-400">
+            <p class="font-bold"><i class="fa-solid fa-spin fa-circle-notch"></i> ĐANG TRUY VẤN STARK GRID...</p>
+            <div class="h-1.5 bg-green-950 rounded w-3/4"></div>
+            <div class="h-1.5 bg-green-950 rounded w-5/6"></div>
+            <div class="h-1.5 bg-green-950 rounded w-1/2"></div>
+        </div>`;
+        document.getElementById('browserAiContentSingle').innerHTML = loadingHtml;
+        document.getElementById('browserContentL').innerHTML = loadingHtml;
+        document.getElementById('browserContentR').innerHTML = loadingHtml;
+    }
+
     sendViaWebSocket(query).then(data => {
         if (data.text) updateSubtitles(data.text);
         if (data.search_results?.length) {
             renderSearchResults(data.search_results, query);
+        } else if (isHolVisible && data.text) {
+            const textHtml = data.text.split('\n').filter(l => l.trim()).map(l =>
+                `<p class="text-green-300">${l}</p>`
+            ).join('');
+            const textDiv = `<div class="space-y-1 text-xs">${textHtml}</div>`;
+            document.getElementById('browserAiContentSingle').innerHTML = textDiv;
+            document.getElementById('browserContentL').innerHTML = textDiv;
+            document.getElementById('browserContentR').innerHTML = textDiv;
         }
     }).catch(() => {
         updateSubtitles("Mất kết nối J.A.R.V.I.S. Kiểm tra backend server.");
+        if (isHolVisible) {
+            document.getElementById('browserAiContentSingle').innerHTML = '<div class="text-amber-400 mt-4"><p>Mất kết nối J.A.R.V.I.S. Kiểm tra backend server.</p></div>';
+        }
     });
 }
 
@@ -681,6 +886,12 @@ function runTimers() {
     }, 500);
 }
 
+window.addEventListener('beforeunload', () => {
+    wakeMode = false;
+    stopWakeListening();
+    if (wakeRestartTimer) { clearTimeout(wakeRestartTimer); wakeRestartTimer = null; }
+});
+
 window.onload = function() {
     connectWebSocket();
     runTimers();
@@ -698,9 +909,7 @@ window.onload = function() {
         }
     });
 
-    setTimeout(() => {
-        sendViaWebSocket("Xin chào").catch(() => {});
-    }, 1500);
+
 
     document.getElementById('voiceCommand').addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
