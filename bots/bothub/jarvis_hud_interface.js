@@ -52,23 +52,46 @@ let pendingResolve = null;
 
 function sendViaWebSocket(message) {
     return new Promise((resolve, reject) => {
-        if (!ws || ws.readyState !== WebSocket.OPEN) {
-            updateSubtitles("Mất kết nối J.A.R.V.I.S., đang thử lại...");
-            reject(new Error("WebSocket not connected"));
+        const doSend = () => {
+            pendingResolve = resolve;
+            ws.send(JSON.stringify({ message }));
+            setTimeout(() => {
+                if (pendingResolve) {
+                    pendingResolve({
+                        type: 'response',
+                        text: 'Thưa Ngài starkling, yêu cầu đã hết thời gian chờ. Vui lòng thử lại.',
+                        search_results: null
+                    });
+                    pendingResolve = null;
+                }
+            }, 60000);
+        };
+
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            doSend();
             return;
         }
-        pendingResolve = resolve;
-        ws.send(JSON.stringify({ message }));
-        setTimeout(() => {
-            if (pendingResolve) {
-                pendingResolve({
-                    type: 'response',
-                    text: 'Thưa Ngài starkling, yêu cầu đã hết thời gian chờ. Vui lòng thử lại.',
-                    search_results: null
-                });
-                pendingResolve = null;
+
+        updateSubtitles("Mất kết nối J.A.R.V.I.S., đang thử lại...");
+        connectWebSocket();
+
+        const retry = setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                clearInterval(retry);
+                doSend();
             }
-        }, 60000);
+        }, 500);
+
+        setTimeout(() => {
+            clearInterval(retry);
+            if (!pendingResolve) return;
+            pendingResolve({
+                type: 'response',
+                text: 'Thưa Ngài starkling, không thể kết nối lại J.A.R.V.I.S.. Vui lòng thử lại sau.',
+                search_results: null
+            });
+            pendingResolve = null;
+        }, 10000);
     });
 }
 
@@ -577,6 +600,9 @@ let wakeRestartCount = 0;
 let wakeRestartTimer = null;
 let wakeSilenceTimer = null;
 let wakeFullText = '';
+let isAwake = false;
+let awakeIdleTimer = null;
+const AWAKE_IDLE_TIMEOUT = 30000;
 
 function triggerVoiceInput() {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -677,6 +703,9 @@ function toggleWakeMode() {
         updateSubtitles("Wake mode ON — nói 'Jarvis', 'Luna' hoặc 'Nuna' để ra lệnh.");
     } else {
         stopWakeListening();
+        isAwake = false;
+        updateWakeStatusUI();
+        if (awakeIdleTimer) { clearTimeout(awakeIdleTimer); awakeIdleTimer = null; }
         btn.classList.remove('bg-green-500', 'text-black', 'shadow-[0_0_12px_rgba(0,255,136,0.5)]');
         btn.classList.add('text-green-400');
         const icon = btn.querySelector('i');
@@ -718,14 +747,32 @@ function startWakeListening() {
         document.getElementById('voiceCommand').value = wakeFullText.trim();
 
         wakeSilenceTimer = setTimeout(() => {
+            console.log('[WAKE] Before parse - raw text:', wakeFullText);
             const text = wakeFullText.trim().toLowerCase();
+
+            if (isAwake) {
+                playSfx('beep');
+                stopWakeListening();
+                const cmd = wakeFullText.trim();
+                if (cmd) {
+                    document.getElementById('voiceCommand').value = cmd;
+                    processCommand();
+                }
+                wakeFullText = '';
+                return;
+            }
+
             const match = text.match(wakeRegex);
             if (match) {
+                console.log('[WAKE] After parse - matched:', match[0], '| afterWake:', text.slice(match.index + match[0].length).trim());
                 playSfx('activate');
                 updateSubtitles("J.A.R.V.I.S. đã thức!");
+                isAwake = true;
+                updateWakeStatusUI();
+                resetAwakeIdleTimer();
                 wakeRestartCount = 0;
                 stopWakeListening();
-                const afterWake = wakeFullText.slice(match.index + match[0].length).trim();
+                const afterWake = text.slice(match.index + match[0].length).trim();
                 if (afterWake) {
                     document.getElementById('voiceCommand').value = afterWake;
                     processCommand();
@@ -766,6 +813,38 @@ function stopWakeListening() {
     }
 }
 
+function updateWakeStatusUI() {
+    const dot = document.getElementById('wakeStatusDot');
+    if (!dot) return;
+    if (isAwake) {
+        dot.className = 'w-1.5 h-1.5 rounded-full bg-green-400 shadow-[0_0_8px_rgba(0,255,136,0.8)] mx-auto mt-0.5 animate-pulse';
+    } else {
+        dot.className = 'w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_6px_rgba(255,0,0,0.6)] mx-auto mt-0.5';
+    }
+}
+
+function resetAwakeIdleTimer() {
+    if (awakeIdleTimer) clearTimeout(awakeIdleTimer);
+    awakeIdleTimer = setTimeout(() => {
+        if (wakeMode && isAwake) {
+            isAwake = false;
+            updateWakeStatusUI();
+            stopWakeListening();
+            updateSubtitles("J.A.R.V.I.S. đã ngủ. Nói 'Luna' để đánh thức.");
+            if (wakeMode) startWakeListening();
+        }
+    }, AWAKE_IDLE_TIMEOUT);
+}
+
+function restartWakeIfAwake() {
+    if (isAwake && wakeMode) {
+        resetAwakeIdleTimer();
+        setTimeout(() => {
+            if (wakeMode && isAwake) startWakeListening();
+        }, 300);
+    }
+}
+
 function updateSubtitles(text) {
     const ids = ['subtitle-single', 'subtitle-L', 'subtitle-R'];
     ids.forEach(id => {
@@ -790,22 +869,24 @@ function processCommand(customQuery = null) {
     const lq = query.toLowerCase();
     if (lq.includes("camera") || lq.includes("thực tế ảo")) {
         toggleWebcam();
+        restartWakeIfAwake();
         return;
     }
     if (lq.includes("kính vr") || lq.includes("sbs")) {
         toggleVRMode();
+        restartWakeIfAwake();
         return;
     }
     if (lq.includes("mở web") || lq.includes("trình duyệt")) {
         if (!isBrowserOpen) toggleHoloBrowser();
+        restartWakeIfAwake();
         return;
     }
     if (lq.includes("tắt âm") || lq.includes("bật âm") || lq.includes("mute")) {
         toggleSound();
+        restartWakeIfAwake();
         return;
     }
-
-    updateSubtitles("Đang kết nối J.A.R.V.I.S....");
 
     const singleHoloEl = document.getElementById('singleHoloBrowser');
     const isHolVisible = singleHoloEl && !singleHoloEl.classList.contains('hidden');
@@ -836,11 +917,13 @@ function processCommand(customQuery = null) {
             document.getElementById('browserContentL').innerHTML = textDiv;
             document.getElementById('browserContentR').innerHTML = textDiv;
         }
+        restartWakeIfAwake();
     }).catch(() => {
         updateSubtitles("Mất kết nối J.A.R.V.I.S. Kiểm tra backend server.");
         if (isHolVisible) {
             document.getElementById('browserAiContentSingle').innerHTML = '<div class="text-amber-400 mt-4"><p>Mất kết nối J.A.R.V.I.S. Kiểm tra backend server.</p></div>';
         }
+        restartWakeIfAwake();
     });
 }
 
@@ -888,8 +971,11 @@ function runTimers() {
 
 window.addEventListener('beforeunload', () => {
     wakeMode = false;
+    isAwake = false;
+    updateWakeStatusUI();
     stopWakeListening();
     if (wakeRestartTimer) { clearTimeout(wakeRestartTimer); wakeRestartTimer = null; }
+    if (awakeIdleTimer) { clearTimeout(awakeIdleTimer); awakeIdleTimer = null; }
 });
 
 window.onload = function() {
