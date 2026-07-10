@@ -16,9 +16,35 @@ async def run_discord():
     await run_bot()
 
 
+async def run_web():
+    import uvicorn
+    import os
+    from servers.web_ui import app
+    
+    ssl_key = "storage/certs/key.pem"
+    ssl_cert = "storage/certs/cert.pem"
+    
+    if os.path.exists(ssl_key) and os.path.exists(ssl_cert):
+        logger.info(f"Starting Web UI with HTTPS on port 5000 (certs loaded from {ssl_cert})")
+        config = uvicorn.Config(
+            app, 
+            host="0.0.0.0", 
+            port=5000, 
+            log_level="info",
+            ssl_keyfile=ssl_key,
+            ssl_certfile=ssl_cert
+        )
+    else:
+        logger.info("Starting Web UI on http://localhost:5050 (inside Docker: port 5000) - HTTP Mode")
+        config = uvicorn.Config(app, host="0.0.0.0", port=5000, log_level="info")
+        
+    server = uvicorn.Server(config)
+    await server.serve()
+
+
 async def main():
-    logger.info("Starting Discord bot...")
-    await run_discord()
+    logger.info("Starting all services...")
+    await asyncio.gather(run_discord(), run_web())
 
 
 if __name__ == "__main__":

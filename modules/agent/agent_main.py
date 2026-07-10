@@ -67,6 +67,9 @@ BRAIN_SYSTEM = _load_prompt(BRAIN_PROMPT_FILE)
 # Track context entries for each user (persists across messages)
 CONTEXT: Dict[int, List[Dict]] = {}
 
+# Export structured search results for web UI
+SEARCH_RESULTS: Dict[int, List[Dict]] = {}
+
 
 def _encode_image(image_path: Path) -> Optional[str]:
     try:
@@ -149,6 +152,7 @@ def _execute_tool(tool_name: str, action: str, params: dict, user_id: int, platf
         elif tool_name == "search_web":
             query = params.get("query") or action or ""
             contexts = web_search(query=query)
+            SEARCH_RESULTS[user_id] = contexts[0]
             result = contexts[1]
 
         elif tool_name == "generate_image":
@@ -202,6 +206,7 @@ def _brain_process(user_message: str, user_id: int,
 
     # Build history string
     history_str = ""
+    chat_history = memory.load_chat_history()
     if chat_history:
         lines = []
         for m in chat_history[-6:]:
