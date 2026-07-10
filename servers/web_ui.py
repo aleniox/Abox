@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import json
+import os
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
@@ -19,6 +20,11 @@ app.mount("/static", StaticFiles(directory="bots/bothub"), name="static")
 async def index():
     with open("bots/bothub/jarvis_hud_interface.html", encoding="utf-8") as f:
         return HTMLResponse(f.read())
+
+
+@app.get("/config")
+async def get_config():
+    return {"tts_api_url": os.getenv("TTS_API_URL", "http://10.0.99.116:8000/sentence")}
 
 
 @app.websocket("/ws/chat")

@@ -5,6 +5,7 @@ let webcamStream = null;
 let faceStream = null;
 let isFaceTrackingActive = true;
 let audioCtx = null;
+let ttsApiUrl = "http://10.0.99.116:8000/sentence";
 
 // WebSocket connection to backend
 let ws = null;
@@ -502,22 +503,20 @@ async function toggleVRMode() {
 
 function speakJarvis(text) {
     if (isMuted) return;
-    try {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'vi-VN';
-        utterance.rate = 1.05;
-        utterance.pitch = 0.95;
-
-        const voices = window.speechSynthesis.getVoices();
-        const viVoice = voices.find(v => v.lang.includes('vi'));
-        if (viVoice) {
-            utterance.voice = viVoice;
-        }
-        window.speechSynthesis.speak(utterance);
-    } catch (e) {
-        console.warn("TTS initialization error: ", e);
-    }
+    const formData = new FormData();
+    formData.append("text", text);
+    fetch(ttsApiUrl, {
+        method: "POST",
+        body: formData
+    })
+    .then(res => res.blob())
+    .then(blob => {
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audio.onended = () => URL.revokeObjectURL(url);
+        audio.play().catch(e => console.warn("Audio play error:", e));
+    })
+    .catch(e => console.warn("TTS API error:", e));
 }
 
 function triggerVoiceInput() {
@@ -656,6 +655,8 @@ window.onload = function() {
     connectWebSocket();
     runTimers();
     updateTelemetryUI();
+
+    fetch("/config").then(r => r.json()).then(c => { ttsApiUrl = c.tts_api_url; }).catch(() => {});
 
     document.body.addEventListener('click', function(e) {
         if (isVRMode) {
