@@ -5,7 +5,6 @@ let webcamStream = null;
 let faceStream = null;
 let isFaceTrackingActive = true;
 let audioCtx = null;
-let ttsApiUrl = "http://10.0.99.116:8000/sentence";
 
 // WebSocket connection to backend
 let ws = null;
@@ -19,8 +18,19 @@ function connectWebSocket() {
     ws.onopen = () => {
         if (wsReconnectTimer) { clearTimeout(wsReconnectTimer); wsReconnectTimer = null; }
     };
-    ws.onmessage = (event) => {
+    ws.onmessage = async (event) => {
         const data = JSON.parse(event.data);
+        if (data.type === 'segment' && data.audio) {
+            console.log("[SEGMENT] received:", data.text?.slice(0, 50));
+            try {
+                const blob = await fetch(`data:audio/wav;base64,${data.audio}`).then(r => r.blob());
+                const url = URL.createObjectURL(blob);
+                audioQueue.push({ url, text: data.text });
+                playNextAudio();
+            } catch (e) {
+                console.error("[SEGMENT] error:", e);
+            }
+        }
         if (data.type === 'response') {
             if (pendingResolve) {
                 pendingResolve(data);
@@ -58,7 +68,7 @@ function sendViaWebSocket(message) {
                 });
                 pendingResolve = null;
             }
-        }, 30000);
+        }, 60000);
     });
 }
 
@@ -193,8 +203,6 @@ async function executeBrowserSearch(viewType) {
             contentL.innerHTML = aiContent.innerHTML;
             contentR.innerHTML = aiContent.innerHTML;
         }
-        updateSubtitles(data.text);
-        speakJarvis(data.text);
     } catch (err) {
         aiContent.innerHTML = `<div class="space-y-1.5 text-amber-400"><p>Mất kết nối hệ thống.</p></div>`;
         contentL.innerHTML = aiContent.innerHTML;
@@ -501,22 +509,46 @@ async function toggleVRMode() {
     }
 }
 
-function speakJarvis(text) {
-    if (isMuted) return;
-    const formData = new FormData();
-    formData.append("text", text);
-    fetch(ttsApiUrl, {
-        method: "POST",
-        body: formData
-    })
-    .then(res => res.blob())
-    .then(blob => {
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        audio.onended = () => URL.revokeObjectURL(url);
-        audio.play().catch(e => console.warn("Audio play error:", e));
-    })
-    .catch(e => console.warn("TTS API error:", e));
+let audioQueue = [];
+let isAudioPlaying = false;
+
+function ensureAudioCtx() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+}
+
+function playNextAudio() {
+    if (isAudioPlaying || audioQueue.length === 0) return;
+    isAudioPlaying = true;
+    const { url, text } = audioQueue.shift();
+    updateSubtitles(text);
+    console.log("[PLAY] playing:", text?.slice(0, 50));
+    ensureAudioCtx();
+    if (audioCtx.state === 'suspended') {
+        console.warn("[PLAY] AudioContext suspended, attempting to resume...");
+        audioCtx.resume().catch(e => console.warn("Cannot resume:", e));
+    }
+    fetch(url)
+        .then(r => r.arrayBuffer())
+        .then(buffer => audioCtx.decodeAudioData(buffer))
+        .then(audioBuffer => {
+            const source = audioCtx.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(audioCtx.destination);
+            source.onended = () => {
+                URL.revokeObjectURL(url);
+                isAudioPlaying = false;
+                playNextAudio();
+            };
+            source.start();
+        })
+        .catch(e => {
+            console.warn("[PLAY] error:", e);
+            URL.revokeObjectURL(url);
+            isAudioPlaying = false;
+            playNextAudio();
+        });
 }
 
 function triggerVoiceInput() {
@@ -598,9 +630,7 @@ function processCommand(customQuery = null) {
 
     updateSubtitles("Đang kết nối J.A.R.V.I.S....");
     sendViaWebSocket(query).then(data => {
-        updateSubtitles(data.text);
-        speakJarvis(data.text);
-
+        if (data.text) updateSubtitles(data.text);
         if (data.search_results?.length) {
             renderSearchResults(data.search_results, query);
         }
@@ -656,7 +686,8 @@ window.onload = function() {
     runTimers();
     updateTelemetryUI();
 
-    fetch("/config").then(r => r.json()).then(c => { ttsApiUrl = c.tts_api_url; }).catch(() => {});
+    // Resume AudioContext sớm nhất có thể — click đầu tiên
+    document.addEventListener('click', () => { initAudio(); }, { once: true });
 
     document.body.addEventListener('click', function(e) {
         if (isVRMode) {
@@ -667,14 +698,8 @@ window.onload = function() {
         }
     });
 
-    setTimeout(async () => {
-        try {
-            const data = await sendViaWebSocket("Xin chào");
-            updateSubtitles(data.text);
-            speakJarvis(data.text);
-        } catch {
-            speakJarvis("Hệ thống kính thực tế ảo J.A.R.V.I.S. đã liên kết.");
-        }
+    setTimeout(() => {
+        sendViaWebSocket("Xin chào").catch(() => {});
     }, 1500);
 
     document.getElementById('voiceCommand').addEventListener('keypress', function(e) {

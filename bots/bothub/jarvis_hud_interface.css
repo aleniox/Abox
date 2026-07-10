@@ -3,9 +3,11 @@ body {
     background-color: #010409;
     color: #00ff88;
     overflow: hidden;
-    height: 100vh;
+    height: 100dvh;
+    min-height: 100dvh;
     margin: 0;
     user-select: none;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .title-font {

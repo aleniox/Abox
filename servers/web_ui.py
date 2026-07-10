@@ -1,13 +1,14 @@
 import asyncio
-import logging
 import json
+import logging
 import os
+import re
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 
-from modules.agent.agent_main import process_message, SEARCH_RESULTS
+from modules.agent.agent_main import process_message, SEARCH_RESULTS, _responder_cycle
 
 logger = logging.getLogger(__name__)
 
@@ -20,11 +21,6 @@ app.mount("/static", StaticFiles(directory="bots/bothub"), name="static")
 async def index():
     with open("bots/bothub/jarvis_hud_interface.html", encoding="utf-8") as f:
         return HTMLResponse(f.read())
-
-
-@app.get("/config")
-async def get_config():
-    return {"tts_api_url": os.getenv("TTS_API_URL", "http://10.0.99.116:8000/sentence")}
 
 
 @app.websocket("/ws/chat")
@@ -49,9 +45,18 @@ async def websocket_chat(ws: WebSocket):
             loop = asyncio.get_event_loop()
             try:
                 result = await loop.run_in_executor(
-                    None, process_message, msg, 1
+                    None, _responder_cycle, msg, 1, None, msg
                 )
-                text = result if isinstance(result, str) else result.get("text", str(result))
+                raw_text = result if isinstance(result, str) else result.get("text", str(result))
+                match = re.search(r'\{.*\}', raw_text, re.DOTALL)
+                if match:
+                    try:
+                        parsed = json.loads(match.group(0))
+                        text = parsed.get("dialogue", raw_text)
+                    except json.JSONDecodeError:
+                        text = raw_text
+                else:
+                    text = raw_text
 
                 # Collect structured search results if available
                 search_results = []
@@ -64,18 +69,24 @@ async def websocket_chat(ws: WebSocket):
                             search_results.append(r)
 
                 logger.info(f"[WS] response ({len(text)} chars) + {len(search_results)} search results")
-                await ws.send_json({
-                    "type": "response",
-                    "text": text,
-                    "search_results": search_results if search_results else None
-                })
+                try:
+                    await ws.send_json({
+                        "type": "response",
+                        "text": text,
+                        "search_results": search_results if search_results else None
+                    })
+                except RuntimeError:
+                    logger.warning("[WS] Client đã ngắt kết nối trước khi gửi response")
             except Exception as e:
                 logger.exception(f"[WS] error: {e}")
-                await ws.send_json({
-                    "type": "response",
-                    "text": f"Xin lỗi thưa Ngài starkling, đã xảy ra lỗi: {str(e)}",
-                    "search_results": None
-                })
+                try:
+                    await ws.send_json({
+                        "type": "response",
+                        "text": f"Xin lỗi thưa Ngài starkling, đã xảy ra lỗi: {str(e)}",
+                        "search_results": None
+                    })
+                except RuntimeError:
+                    logger.warning("[WS] Client đã ngắt kết nối khi gửi error response")
 
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected")
