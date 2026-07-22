@@ -16,7 +16,8 @@ def call_chat_api(messages,
                   stream=False,
                   tools=None,
                   max_token=config.MAX_TOKEN_CHAT,
-                  host=config.LLM_API_CHAT):
+                  host=config.LLM_API_CHAT,
+                  resonning=False):
     payload = {
         "model": model,
         "messages": messages,
@@ -28,6 +29,7 @@ def call_chat_api(messages,
             "top_k": 64,
         },
         "tools": tools,
+        "chat_template_kwargs": {"enable_thinking": resonning},
     }
     response = requests.post(host, json=payload, stream=stream)
     response.raise_for_status()
