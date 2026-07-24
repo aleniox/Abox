@@ -5,11 +5,12 @@ import os
 import re
 import socket
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, Form
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, Response
 
 from modules.agent.agent_main import process_message, SEARCH_RESULTS
+from modules.core.speech2text import transcribe_api_whisper
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,24 @@ async def index():
 @app.get("/favicon.ico")
 async def favicon():
     return Response(status_code=204)
+
+
+@app.post("/transcribe")
+async def transcribe(
+    audio: UploadFile = File(...),
+    model: str = Form("convert-model-880000"),
+    language: str = Form("vi"),
+    task: str = Form("transcribe"),
+    batch_size: int = Form(8),
+    chunk_size: int = Form(15),
+    compute_type: str = Form("float16"),
+):
+    audio_data = await audio.read()
+    text = await transcribe_api_whisper(
+        audio_data, audio.filename or "audio.wav",
+        model, language, task, batch_size, chunk_size, compute_type
+    )
+    return {"text": text, "language": language}
 
 
 # Suppress Windows Proactor ConnectionResetError on WS disconnect

@@ -604,22 +604,55 @@ let isAwake = false;
 let awakeIdleTimer = null;
 const AWAKE_IDLE_TIMEOUT = 30000;
 
-function triggerVoiceInput() {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        updateSubtitles("Trình duyệt hoặc thiết bị của bạn không hỗ trợ công cụ Speech Recognition.");
-        return;
-    }
+// Server-side STT (MediaRecorder)
+let isServerSTT = false;
+let mediaRecorder = null;
+let audioChunks = [];
+let sttStream = null;
 
+function toggleSTTMode() {
+    isServerSTT = !isServerSTT;
+    const btn = document.getElementById('btnSTTMode');
+    if (!btn) return;
+    if (isServerSTT) {
+        btn.classList.add('bg-cyan-400', 'text-black');
+        btn.classList.remove('border-cyan-500/30', 'text-cyan-400');
+        updateSubtitles("Đã chuyển sang ASR Server (chất lượng cao).");
+    } else {
+        btn.classList.remove('bg-cyan-400', 'text-black');
+        btn.classList.add('border-cyan-500/30', 'text-cyan-400');
+        updateSubtitles("Đã chuyển sang Browser Speech Recognition.");
+    }
+}
+
+function triggerVoiceInput() {
     const btnMic = document.getElementById('btnMic');
     const btnMicSide = document.getElementById('btnMicSide');
 
     // Nếu đang nghe thì stop
+    if (isServerSTT && mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        if (sttStream) { sttStream.getTracks().forEach(t => t.stop()); sttStream = null; }
+        btnMic.innerHTML = '<i class="fa-solid fa-microphone"></i> Ra Lệnh Giọng Nói';
+        if (btnMicSide) btnMicSide.innerHTML = '<i class="fa-solid fa-microphone text-xs"></i>';
+        return;
+    }
     if (micRecognition) {
         try { micRecognition.stop(); } catch(e) {}
         micRecognition = null;
         if (micSilenceTimer) clearTimeout(micSilenceTimer);
         btnMic.innerHTML = '<i class="fa-solid fa-microphone"></i> Ra Lệnh Giọng Nói';
         if (btnMicSide) btnMicSide.innerHTML = '<i class="fa-solid fa-microphone text-xs"></i>';
+        return;
+    }
+
+    if (isServerSTT) {
+        startServerSTT();
+        return;
+    }
+
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        updateSubtitles("Trình duyệt hoặc thiết bị của bạn không hỗ trợ công cụ Speech Recognition.");
         return;
     }
 
@@ -687,6 +720,71 @@ function triggerVoiceInput() {
     };
 
     micRecognition.start();
+}
+
+function startServerSTT() {
+    const btnMic = document.getElementById('btnMic');
+    const btnMicSide = document.getElementById('btnMicSide');
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        updateSubtitles("Trình duyệt không hỗ trợ thu âm.");
+        return;
+    }
+
+    playSfx('beep');
+    audioChunks = [];
+
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            sttStream = stream;
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) audioChunks.push(e.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                if (sttStream) { sttStream.getTracks().forEach(t => t.stop()); sttStream = null; }
+                btnMic.innerHTML = '<i class="fa-solid fa-microphone"></i> Ra Lệnh Giọng Nói';
+                if (btnMicSide) btnMicSide.innerHTML = '<i class="fa-solid fa-microphone text-xs"></i>';
+
+                if (audioChunks.length === 0) return;
+                const blob = new Blob(audioChunks, { type: 'audio/webm;codecs=opus' });
+                const formData = new FormData();
+                formData.append('audio', blob, 'recording.webm');
+
+                updateSubtitles("J.A.R.V.I.S. đang xử lý giọng nói qua ASR Server...");
+                try {
+                    const res = await fetch('/transcribe', { method: 'POST', body: formData });
+                    const data = await res.json();
+                    if (data.text) {
+                        document.getElementById('voiceCommand').value = data.text;
+                        processCommand(data.text);
+                    } else {
+                        updateSubtitles("Không nhận dạng được giọng nói.");
+                    }
+                } catch (err) {
+                    console.error("[STT] upload error:", err);
+                    updateSubtitles("Lỗi kết nối ASR Server.");
+                }
+            };
+
+            mediaRecorder.start();
+            btnMic.innerHTML = '<i class="fa-solid fa-microphone text-red-500 animate-pulse"></i> Đang Nghe (Server)';
+            if (btnMicSide) btnMicSide.innerHTML = '<i class="fa-solid fa-microphone text-xs text-red-500 animate-pulse"></i>';
+            updateSubtitles("J.A.R.V.I.S. đang thu tiếng qua ASR Server...");
+
+            // Tự động dừng sau 5 giây
+            setTimeout(() => {
+                if (mediaRecorder && mediaRecorder.state === 'recording') {
+                    mediaRecorder.stop();
+                }
+            }, 5000);
+        })
+        .catch(err => {
+            console.error("[STT] getUserMedia error:", err);
+            updateSubtitles("Không thể truy cập Microphone.");
+        });
 }
 
 function toggleWakeMode() {
