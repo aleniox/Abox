@@ -50,7 +50,9 @@ def login_and_click(
         # Tạo context mới với cấu hình mobile emulation và bỏ qua lỗi SSL
         context = browser.new_context(
             **pixel_2,
-            ignore_https_errors=True
+            ignore_https_errors=True,
+            timezone_id="Asia/Ho_Chi_Minh",
+            locale="vi-VN"
         )
         
         page = context.new_page()
